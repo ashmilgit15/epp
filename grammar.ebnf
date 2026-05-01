@@ -1,0 +1,86 @@
+/* e++ Grammar Specification (EBNF) */
+
+/* === Program Structure === */
+program        → statement* EOF
+statement      → func_def
+               | class_def
+               | if_stmt
+               | for_stmt
+               | while_stmt
+               | try_catch
+               | return_stmt
+               | import_stmt
+               | expr_stmt
+
+/* === Function Definition === */
+func_def       → "func" IDENT "(" params? ")" ":" block
+params         → IDENT ("," IDENT)*
+func_call      → IDENT "(" args? ")"
+args           → expr ("," expr)*
+
+/* === Class Definition === */
+class_def      → "class" IDENT ":" block
+class_body     → (func_def)*
+
+/* === Control Flow === */
+if_stmt        → "if" expr ":" block
+                ("elif" expr ":" block)*
+                ("else" ":" block)?
+
+for_stmt       → "for" IDENT "in" expr ":" block
+
+while_stmt     → "while" expr ":" block
+
+try_catch      → "try" ":" block
+                "catch" IDENT ":" block
+
+/* === Return & Import === */
+return_stmt    → "return" expr?
+import_stmt    → "import" STRING
+
+/* === Blocks & Scopes === */
+block          → INDENT statement* DEDENT
+
+/* === Expressions === */
+expr           → assignment
+assignment     → IDENT "=" expr
+               | comparison
+comparison     → term (("is greater than" | "is less than" | "is equal to"
+                            | "is greater than or equal to" | "is less than or equal to"
+                            | "is" | "is not") term)*
+term           → factor (("and" | "or") factor)*
+factor         → unary (("+" | "-" | "*" | "/") unary)*
+unary          → "not" unary | primary
+primary        → NUMBER | STRING | "true" | "false" | "null"
+               | IDENT | func_call | "." access
+               | "(" expr ")" | list_literal | dict_literal
+
+list_literal   → "[" expr ("," expr)* "]"
+dict_literal   → "{" pair ("," pair)* "}"
+pair           → expr ":" expr
+
+/* === Members & Access === */
+access         → "." IDENT ("(" args? ")")?
+
+/* === Operators === */
+/*
+   is               → equality (==)
+   is not           → inequality (!=)
+   is greater than  → >
+   is less than     → <
+   is equal to      → ==
+   is greater than or equal to → >=
+   is less than or equal to    → <=
+   and              → &&
+   or               → ||
+   not              → !
+*/
+
+/* === Tokens === */
+IDENT          → letter+
+NUMBER         → digit+
+STRING         → "\"" any*"\""
+COMMENT         → "#" any* NEWLINE
+INDENT         → "\t" or "    " (4 spaces)
+NEWLINE        → "\n"
+EOF            → end of file

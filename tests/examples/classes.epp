@@ -1,0 +1,31 @@
+class Greeter:
+    func init(name):
+        self.name = name
+    
+    func greet():
+        say "Hello, " + self.name + "!"
+    
+    func farewell():
+        say "Goodbye, " + self.name + "!"
+
+person = Greeter("Alice")
+person.greet()
+person.farewell()
+
+say ""
+
+class Counter:
+    func init():
+        self.count = 0
+    
+    func increment():
+        self.count = self.count + 1
+    
+    func get_count():
+        return self.count
+
+counter = Counter()
+counter.increment()
+counter.increment()
+counter.increment()
+say "Count: " + counter.count

@@ -1,0 +1,8 @@
+func fibonacci(n):
+    if n is less than or equal to 1:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+
+say "Fibonacci sequence:"
+for i in range(10):
+    say "fib(" + i + ") = " + fibonacci(i)

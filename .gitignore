@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.spec
+
+# Node / Electron
+epp-ide/node_modules/
+epp-ide/release/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / Misc
+.DS_Store
+*.tar.gz
+*.zip
+*.AppImage
+*.exe

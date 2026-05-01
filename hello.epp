@@ -1,0 +1,14 @@
+window "Color Selector" width 400 height 300 color "white" id "window"
+label "Select a color:" at 20 20
+dropdown "color" options ["Red", "Green", "Blue"] at 20 50 on_change change_color
+
+func change_color():
+    selected_color = get_text "color"
+    if selected_color is equal to "Red":
+        set_color "window" to "red"
+    elif selected_color is equal to "Green":
+        set_color "window" to "green"
+    elif selected_color is equal to "Blue":
+        set_color "window" to "blue"
+
+show_window

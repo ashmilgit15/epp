@@ -1,0 +1,12 @@
+window "Hello App" width 400 height 250
+
+label "What is your name?" at 20 20 font_size 14
+input "name_box" at 20 60 width 250 placeholder "Type your name..."
+button "Say Hello" at 20 100 on_click greet
+label "" at 20 150 id "result_lbl"
+
+func greet():
+    name = get_text "name_box"
+    set_text "result_lbl" to "Hello, " + name + "!"
+
+show_window

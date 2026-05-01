@@ -1,0 +1,13 @@
+numbers = [1, 2, 3, 4, 5]
+say "First number: " + numbers[0]
+say "Length: " + len(numbers)
+
+push(numbers, 6)
+say "After push: " + numbers[5]
+
+popped = pop(numbers)
+say "Popped: " + popped
+
+person = {"name": "Alice", "age": 25}
+say "Name: " + person["name"]
+say "Keys: " + keys(person)
