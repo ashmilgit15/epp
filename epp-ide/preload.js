@@ -18,5 +18,6 @@ contextBridge.exposeInMainWorld('eppAPI', {
     showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
     showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options),
     chatWithAI: (messages) => ipcRenderer.invoke('chat-with-ai', messages),
+    getAiStatus: () => ipcRenderer.invoke('get-ai-status'),
     onAiStreamChunk: (callback) => ipcRenderer.on('ai-stream-chunk', (event, chunk) => callback(chunk))
 });

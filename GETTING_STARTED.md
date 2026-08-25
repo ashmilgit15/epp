@@ -2,7 +2,7 @@
 
 ## What is e++?
 
-e++ is a beginner-friendly programming language designed to be **the easiest language to learn in the world**. It uses English-like syntax that reads naturally.
+e++ is a beginner-friendly programming language designed to be **the easiest language to learn in the world**. It uses English-like syntax that reads naturally — and it ships with a built-in desktop GUI framework, canvas drawing and animation.
 
 ---
 
@@ -11,49 +11,38 @@ e++ is a beginner-friendly programming language designed to be **the easiest lan
 ### Option 1: E++ IDE (Recommended for Beginners)
 
 The E++ IDE provides a complete development environment with:
-- Syntax highlighting
+- Syntax highlighting + **autocomplete** (press `Ctrl+Space`)
 - File explorer
-- Run button
-- Output terminal
+- One-click Run (`F5`)
+- Output terminal with automatic error-line highlighting
+- **Examples gallery** built in
+- Light/dark theme toggle
 
 **To start the IDE:**
 ```bash
-cd epp-ide/release/linux-unpacked
-./epp-ide
+cd epp-ide
+npm install
+npm start
 ```
 
 ### Option 2: Any Text Editor
 
-You can write e++ code in any text editor:
-- VS Code
-- Notepad
-- Sublime Text
-- Nano/Vim
-- Any plain text editor
+Write code anywhere and save with the `.epp` extension, e.g. `myscript.epp`.
 
-**Save your file with `.epp` extension**, e.g., `myscript.epp`
+### Option 3: Command Line (with REPL)
 
-### Option 3: Command Line
-
-Create and run directly from terminal:
 ```bash
-echo 'say "Hello!"' > hello.epp
-./dist/epp hello.epp
-```
-
----
-
-## How to Run e++ Programs
-
-### Using the Executable
-```bash
-./dist/epp your_program.epp
-```
-
-### Using Python
-```bash
+# Run a program
 python3 -m interpreter.epp your_program.epp
+
+# Evaluate a one-liner
+python3 -m interpreter.epp -e 'say "quick math: {2 ^ 10}"'
+
+# Start an interactive REPL — just type e++!
+python3 -m interpreter.epp
 ```
+
+REPL commands: `help`, `vars`, `clear`, `exit`.
 
 ---
 
@@ -61,311 +50,279 @@ python3 -m interpreter.epp your_program.epp
 
 ### 1. Comments
 ```epp
-# This is a comment
-# Comments are ignored by the interpreter
+# hash comment
+// slash comment
 ```
 
-### 2. Variables
+### 2. Variables & Compound Assignment
 ```epp
-# No type declarations needed
 name = "Alice"
 age = 25
-height = 5.8
-is_student = true
-nothing = null
+score = 10
+score += 5    # also -= *= /= %=
 ```
 
-### 3. Printing Output
+### 3. Printing & String Interpolation
 ```epp
-say "Hello, World!"
-say "Your age is: " + 25
+say "Hello!"
+say "Hi {name}, next year you'll be {age + 1}!"
+```
+Anything inside `{...}` is evaluated. Use single quotes for strings inside `{}`:
+```epp
+user = {"name": "Zoe"}
+say "Hi {user['name']}!"
 ```
 
 ### 4. Getting User Input
 ```epp
 name = input("What is your name? ")
-say "Hello, " + name
+say "Hello, {name}!"
 ```
 
 ### 5. Math Operations
 ```epp
-a = 10 + 5    # Addition
-b = 10 - 3    # Subtraction
-c = 4 * 2     # Multiplication
-d = 15 / 3    # Division
+a = 10 + 5
+b = 2 ^ 10      # power → 1024
+c = 17 % 5      # modulo → 2
+d = 15 / 3      # division → 5 (whole results stay whole)
 ```
 
-### 6. String Concatenation
+### 6. Comparisons — English OR symbols, your choice
 ```epp
-first = "Hello"
-second = "World"
-full = first + " " + second    # "Hello World"
-```
-
-### 7. Comparisons (English-like!)
-```epp
-if x is greater than 10:
+if x > 10 and x != 15:            # or: x is greater than 10 / is not equal to
     say "big"
 
-if x is less than 5:
-    say "small"
+if name == "Alice":               # or: name is equal to "Alice"
+    say "hi!"
 
-if x is equal to 10:
-    say "exact"
-
-if x is not 0:
-    say "not zero"
-
-if x is greater than or equal to 10:
-    say "at least 10"
-
-if x is less than or equal to 5:
-    say "at most 5"
+if score >= 60:                   # or: score is greater than or equal to 60
+    say "passed"
 ```
 
-### 8. Boolean Logic
+### 7. If/Elif/Else
 ```epp
-if x is greater than 0 and x is less than 10:
-    say "single digit positive"
-
-if is_sunny or is_warm:
-    say "nice weather"
-
-if not is_raining:
-    say "no umbrella needed"
-```
-
-### 9. If/Elif/Else
-```epp
-if score is greater than or equal to 90:
-    say "Grade: A"
-elif score is greater than or equal to 80:
-    say "Grade: B"
-elif score is greater than or equal to 70:
-    say "Grade: C"
+if score >= 90:
+    say "A"
+elif score >= 80:
+    say "B"
 else:
-    say "Grade: F"
+    say "keep trying"
 ```
 
-### 10. For Loops
+### 8. Loops — three flavours plus break/continue
 ```epp
-# Loop from 0 to 4
 for i in range(5):
     say i
 
-# Loop through a list
-fruits = ["apple", "banana", "cherry"]
-for fruit in fruits:
-    say fruit
+repeat 3 times:
+    say "echo"
+
+count = 0
+while count < 5:
+    count += 1
+
+for c in "abc":
+    if c == "b":
+        continue     # skip b
+    say c
 ```
 
-### 11. While Loops
+### 9. Switch
 ```epp
-count = 1
-while count is less than or equal to 5:
-    say count
-    count = count + 1
+switch day:
+    case "Saturday", "Sunday":
+        say "weekend!"
+    default:
+        say "workday"
 ```
 
-### 12. Functions
+### 10. Functions
 ```epp
-# Define a function
-func greet(name):
-    say "Hello, " + name
-
-# Call the function
-greet("Alice")
-greet("Bob")
-
-# Function with return value
 func add(a, b):
     return a + b
 
-result = add(5, 3)
-say result    # prints 8
+result = add(5, 3)          # parentheses style...
+total = add 5, 3            # not supported — use parens!
+read_file "notes.txt"       # ...but string-first functions have shorthand
+write_file "out.txt", "hi"  # extra args after a comma
 ```
 
-### 13. Recursion
+### 11. Lists & Dictionaries with real indexing
 ```epp
-func factorial(n):
-    if n is less than or equal to 1:
-        return 1
-    return n * factorial(n - 1)
-
-say factorial(5)    # prints 120
-```
-
-### 14. Lists
-```epp
-# Create a list
 numbers = [1, 2, 3, 4, 5]
+say numbers[0]         # first
+say numbers[-1]        # last (negative indexing!)
+numbers[2] = 99
 
-# Access elements
-say numbers[0]      # prints 1
+person = {
+    "name": "Alice",
+    "age": 25
+}
+say person["name"]
+person["city"] = "Paris"
 
-# Add element
-push(numbers, 6)
-
-# Remove last element
-last = pop(numbers)
-
-# Length
-say len(numbers)
+matrix = [[1, 2], [3, 4]]
+say matrix[1][0]       # 3 — chained indexing
 ```
 
-### 15. Dictionaries (Key-Value Pairs)
-```epp
-# Create a dictionary
-person = {"name": "Alice", "age": 25}
+Handy methods: `.push(x)` `.pop()` `.contains(x)` `.index_of(x)` `.first()` `.last()` `.sort()` `.reverse()`, strings get `.upper()` `.lower()` `.trim()` `.split(sep)` `.replace(a, b)` and more.
 
-# Access values
-say person["name"]    # prints Alice
-say person["age"]     # prints 25
-
-# Get keys and values
-say keys(person)
-say values(person)
-```
-
-### 16. Classes
+### 12. Classes — methods take arguments properly
 ```epp
 class Animal:
-    func init(name):
+    func init(name, sound):
         self.name = name
-    
-    func speak():
-        say self.name + " makes a sound"
+        self.sound = sound
+    func speak_to(other):
+        return "{self.name}: {self.sound} at {other.name}"
 
-# Create an instance
-dog = Animal("Rex")
-dog.speak()           # prints "Rex makes a sound"
-
-# Access properties
-say dog.name          # prints "Rex"
+dog = Animal("Rex", "Woof")
+cat = Animal("Tom", "Meow")
+say dog.speak_to(cat)
 ```
 
-### 17. Try/Catch (Error Handling)
+### 13. Try/Catch — robust error handling
 ```epp
 try:
     result = 10 / 0
-catch error:
-    say "Error: " + error
+catch err:
+    say "Oops: {err}"
+
+try:
+    risky_thing()        # catch block is optional
+say "moving on..."
+```
+`return` works correctly inside try blocks.
+
+### 14. Imports
+```epp
+import "utils.epp"
+```
+Files are resolved relative to the importing file; each file runs once; circular imports fail with a friendly message.
+
+---
+
+## GUI Apps
+
+```epp
+window "My App" width 400 height 300 color "#f8f8f8"
+
+label "Enter your name:" at 20 20
+input "box" at 20 50 width 220 placeholder "type here..."
+slider "vol" from 0 to 100 at 20 90 on_change vol_changed
+progress "bar" at 20 130 width 300
+button "Greet" at 20 170 width 150 height 45 on_click greet color "lightblue"
+
+func vol_changed():
+    set_progress "bar" to get_text "vol"
+
+func greet():
+    alert "Hello {get_text('box')}!"
+
+show_window
 ```
 
-### 18. Importing Files
-```epp
-# Import another e++ file
-import "utils.epp"
+Widgets: `window` `label` `button` `input` `textbox` `checkbox` `dropdown` `slider` `progress` `image`.
+Commands: `set_text ... to ...`, `get_text "id"`, `set_color ... to ...`, `set_visible`, `set_progress ... to ...`, `alert`, `beep`.
 
-# Now you can use functions from utils.epp
+> Note: words like `text`, `color`, `width` are *soft keywords* — they work as normal variable names too: `text = "hello"` is fine!
+
+## Canvas Drawing & Animation
+
+```epp
+window "Stars" width 500 height 400 color "black"
+canvas "cv" width 480 height 360 color "black"
+
+every 100 milliseconds call twinkle
+
+func twinkle():
+    draw dot on "cv" at random_int(0, 480) random_int(0, 360) color "white"
+
+show_window
+```
+
+Draw shapes: `draw line/rectangle/circle/dot/text on "cv" ...`, clear with `clear_canvas "cv"`. Time things with `every N milliseconds call fn` (repeating) or `after N milliseconds call fn` (once).
+
+## Networking & JSON
+```epp
+data = fetch_json("https://api.github.com/users/octocat")
+say data["login"]
+
+config = {"theme": "dark"}
+write_file "config.json", to_json(config)
+loaded = parse_json(read_file "config.json")
 ```
 
 ---
 
-## Built-in Functions
+## Built-in Functions (Quick Reference)
 
-| Function | Description | Example |
-|----------|-------------|---------|
-| `say(x)` | Print output | `say "hello"` |
-| `input(prompt)` | Get user input | `name = input("Name: ")` |
-| `type(x)` | Get type name | `type(42)` → `"int"` |
-| `len(x)` | Get length | `len([1,2,3])` → 3 |
-| `range(n)` | Create range | `range(5)` → `[0,1,2,3,4]` |
-| `str(x)` | Convert to string | `str(42)` → `"42"` |
-| `int(x)` | Convert to int | `int("42")` → 42 |
-| `float(x)` | Convert to float | `float("3.14")` → 3.14 |
-| `bool(x)` | Convert to bool | `bool(0)` → false |
-| `push(list, item)` | Add to list | `push(nums, 5)` |
-| `pop(list)` | Remove last | `pop(nums)` |
-| `keys(dict)` | Get dict keys | `keys(d)` |
-| `values(dict)` | Get dict values | `values(d)` |
-| `read_file(path)` | Read file | `read_file("test.txt")` |
-| `write_file(path, content)` | Write file | `write_file("out.txt", "hi")` |
-| `exists(path)` | Check file exists | `exists("data.txt")` |
-| `random()` | Random number 0-1 | `random()` |
-| `time()` | Current timestamp | `time()` |
-| `sleep(seconds)` | Pause execution | `sleep(1)` |
+| Category | Functions |
+|----------|-----------|
+| I/O | `say`, `input` |
+| Types | `type str int float bool` |
+| Collections | `len range push pop keys values contains index_of sort reversed sum slice` |
+| Strings | `split join trim replace upper lower` |
+| Math | `abs round floor ceil pow sqrt min max` |
+| Files | `read_file write_file append_file exists delete_file` |
+| System | `random random_int shuffle time clock sleep` |
+| Web | `fetch fetch_json parse_json to_json` |
 
 ---
 
 ## Complete Example Program
 
 ```epp
-# e++ Example Program
-
-# Function to calculate factorial
+# Modern e++ demo
 func factorial(n):
-    if n is less than or equal to 1:
+    if n <= 1:
         return 1
     return n * factorial(n - 1)
 
-# Class to represent a person
 class Person:
     func init(name, age):
         self.name = name
         self.age = age
-    
     func introduce():
-        say "Hi, I'm " + self.name
-        say "I'm " + self.age + " years old"
-    
-    func is_adult():
-        return self.age is greater than or equal to 18
+        say "Hi, I'm {self.name}, {self.age}"
 
-# Main program
 say "=== e++ Demo ==="
-say ""
+name = input("Your name? ")
 
-# Variables
-name = input("Enter your name: ")
-say "Hello, " + name + "!"
-say ""
+say "Factorial of 5: {factorial(5)}"
+p = Person(name, 25)
+p.introduce()
 
-# Calculate factorial
-say "Factorial of 5: " + factorial(5)
-say ""
-
-# Create a person
-person = Person(name, 25)
-person.introduce()
-
-if person.is_adult():
-    say "You are an adult!"
+if p.age >= 18:
+    say "adult"
 else:
-    say "You are a minor."
-say ""
+    say "minor"
 
-# Work with lists
-say "Counting from 1 to 5:"
 for i in range(5):
-    say "  Number: " + (i + 1)
+    say "Number: {i + 1}"
 ```
 
 ---
 
 ## Tips for Beginners
 
-1. **Use 4 spaces for indentation** - e++ uses indentation like Python
+1. **Use 4 spaces for indentation**
 2. **Save files with `.epp` extension**
-3. **Use `say` to debug** - print values to see what's happening
-4. **Read error messages carefully** - they tell you the line number and what's wrong
-5. **Start simple** - write small programs first, then build up
-
----
+3. **Use `say` and `{interpolation}` to debug**
+4. **Read error messages** — they show the line number and usually a fix suggestion; the IDE even highlights the line for you
+5. **Press Ctrl+Space in the IDE** for autocomplete of every function
+6. **Open Examples** in the IDE for ready-made programs (games, art, timers!)
 
 ## File Locations
 
 | Item | Location |
 |------|----------|
-| IDE Executable | `epp-ide/release/linux-unpacked/epp-ide` |
-| CLI Interpreter | `dist/epp` |
+| CLI Interpreter | `python3 -m interpreter.epp` (or bundled `dist/epp`) |
 | Example Programs | `tests/examples/` |
 | Language Spec | `LANGUAGE_SPEC.md` |
-
----
+| AI config | `epp-ide/config.json.example` |
 
 ## Getting Help
 
-- Read `LANGUAGE_SPEC.md` for complete language reference
+- Read `LANGUAGE_SPEC.md` for the complete language reference
 - Check example programs in `tests/examples/`
-- Error messages include line numbers and suggestions

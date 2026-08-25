@@ -106,10 +106,35 @@ class WhileStmt(Node):
         self.body = body
 
 class TryCatch(Node):
-    def __init__(self, try_body, catch_var, catch_body):
+    def __init__(self, try_body, catch_var=None, catch_body=None):
         self.try_body = try_body
         self.catch_var = catch_var
         self.catch_body = catch_body
+
+class RepeatStmt(Node):
+    """repeat <count> times:"""
+    def __init__(self, count, body):
+        self.count = count
+        self.body = body
+
+class SwitchStmt(Node):
+    """switch <expr>: / case v[, v2]: ... / default:"""
+    def __init__(self, subject, cases, default_body=None):
+        self.subject = subject
+        self.cases = cases          # list of ([values], body)
+        self.default_body = default_body
+
+class BreakStmt(Node):
+    pass
+
+class ContinueStmt(Node):
+    pass
+
+class BreakException(Exception):
+    pass
+
+class ContinueException(Exception):
+    pass
 
 class ReturnStmt(Node):
     def __init__(self, value):
@@ -152,13 +177,14 @@ class IndexAssignment(Node):
 # ── GUI Nodes ──────────────────────────────────────────────────────────────────
 
 class WindowStmt(Node):
-    """window "Title" width W height H [color "bg"]"""
-    def __init__(self, title, width, height, color=None, resizable=True):
+    """window "Title" width W height H [color "bg"] [id "name"]"""
+    def __init__(self, title, width, height, color=None, resizable=True, widget_id=None):
         self.title   = title
         self.width   = width
         self.height  = height
         self.color   = color
         self.resizable = resizable
+        self.widget_id = widget_id
 
 class LabelStmt(Node):
     """label "text" at X Y [font_size N] [color "c"] [id "name"]"""
@@ -240,6 +266,9 @@ class GetTextStmt(Node):
     def __init__(self, widget_id):
         self.widget_id = widget_id
 
+# Alias: get_text used in expression position
+GetTextExpr = GetTextStmt
+
 class ShowWindowStmt(Node):
     """show_window  — starts the GUI event loop"""
     pass
@@ -260,3 +289,78 @@ class SetVisibleStmt(Node):
     def __init__(self, widget_id, visible):
         self.widget_id = widget_id
         self.visible   = visible
+
+# ── Creative/Canvas Nodes ─────────────────────────────────────────────────────
+
+class CanvasStmt(Node):
+    """canvas "id" width W height H [color "bg"]"""
+    def __init__(self, widget_id, width, height, color=None):
+        self.widget_id = widget_id
+        self.width  = width
+        self.height = height
+        self.color  = color
+
+class DrawStmt(Node):
+    """draw shape on "canvas_id" with x1 y1 x2 y2 ... [color "c"] [width N] [fill "c"]"""
+    def __init__(self, shape, canvas_id, coords, color=None, fill=None, outline_width=None, text=None):
+        self.shape     = shape      # line | rectangle | oval | circle | text | polygon | arc
+        self.canvas_id = canvas_id
+        self.coords    = coords     # list of expression nodes
+        self.color     = color
+        self.fill      = fill
+        self.outline_width = outline_width
+        self.text      = text
+
+class ClearCanvasStmt(Node):
+    """clear_canvas "id\""""
+    def __init__(self, canvas_id):
+        self.canvas_id = canvas_id
+
+class SliderStmt(Node):
+    """slider "id" from A to B at X Y [on_change func]"""
+    def __init__(self, widget_id, minimum, maximum, x, y, on_change=None):
+        self.widget_id = widget_id
+        self.minimum   = minimum
+        self.maximum   = maximum
+        self.x         = x
+        self.y         = y
+        self.on_change = on_change
+
+class ProgressStmt(Node):
+    """progress "id" value V at X Y width W"""
+    def __init__(self, widget_id, x, y, width=None):
+        self.widget_id = widget_id
+        self.x         = x
+        self.y         = y
+        self.width     = width
+
+class TimerStmt(Node):
+    """every N milliseconds call func_name — repeating timer"""
+    def __init__(self, interval, handler, in_seconds=False):
+        self.interval = interval
+        self.handler  = handler
+        self.in_seconds = in_seconds
+
+class AfterStmt(Node):
+    """after N milliseconds call func_name — one-shot delay"""
+    def __init__(self, delay, handler, in_seconds=False):
+        self.delay   = delay
+        self.handler = handler
+        self.in_seconds = in_seconds
+
+class BeepStmt(Node):
+    """beep [frequency Hz] [duration ms]"""
+    def __init__(self, frequency=None, duration=None):
+        self.frequency = frequency
+        self.duration  = duration
+
+class GetSliderStmt(Node):
+    """get_slider "id" → current numeric value (alias of get_text)"""
+    def __init__(self, widget_id):
+        self.widget_id = widget_id
+
+class SetProgressStmt(Node):
+    """set_progress "id" to value"""
+    def __init__(self, widget_id, value):
+        self.widget_id = widget_id
+        self.value     = value

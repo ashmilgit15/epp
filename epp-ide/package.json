@@ -1,6 +1,6 @@
 {
   "name": "epp-ide",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "IDE for the e++ programming language",
   "main": "main.js",
   "scripts": {
@@ -20,11 +20,7 @@
   "license": "MIT",
   "type": "commonjs",
   "dependencies": {
-    "@monaco-editor/react": "^4.7.0",
-    "monaco-editor": "^0.55.1",
-    "node-fetch": "^2.7.0",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "monaco-editor": "^0.55.1"
   },
   "devDependencies": {
     "electron": "^28.3.3",
@@ -48,7 +44,8 @@
       "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
       "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
       "!**/{appveyor.yml,.travis.yml,circle.yml}",
-      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}",
+      "!config.json"
     ],
     "extraResources": [
       {
@@ -58,7 +55,7 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.png"
     },
     "linux": {
       "target": "AppImage",
@@ -66,7 +63,7 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "assets/icon.icns"
+      "icon": "assets/icon.png"
     }
   }
 }

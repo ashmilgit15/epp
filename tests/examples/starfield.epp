@@ -1,0 +1,16 @@
+# Starfield — animated canvas demo
+window "Starfield" width 500 height 400 color "black"
+canvas "cv" width 480 height 360 color "black"
+label "" at 10 370 font_size 12 color "gray" id "info"
+
+func add_star():
+    colors = ["white", "#aaaaff", "#ffddaa", "#ffaaaa"]
+    pick = colors[random_int(0, 3)]
+    draw dot on "cv" at random_int(0, 480) random_int(0, 360) color pick
+
+func tick():
+    repeat 3 times:
+        add_star()
+
+every 100 milliseconds call tick
+show_window

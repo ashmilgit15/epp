@@ -5,35 +5,50 @@ const { spawn } = require('child_process');
 
 let mainWindow;
 let runningProcess = null;
-let eppPath;
 
-function getEppPath() {
-    // Try multiple locations
+function findBundledBinary() {
     const possiblePaths = [
         path.join(process.resourcesPath, 'dist', 'epp'),
         path.join(__dirname, 'dist', 'epp'),
         path.join(__dirname, '..', 'dist', 'epp'),
         path.join(__dirname, 'resources', 'dist', 'epp')
     ];
-    
+
     if (process.platform === 'win32') {
         possiblePaths.push(
             path.join(process.resourcesPath, 'dist', 'epp.exe'),
             path.join(__dirname, 'dist', 'epp.exe')
         );
     }
-    
+
     for (const p of possiblePaths) {
-        if (fs.existsSync(p)) {
+        try {
+            fs.accessSync(p, fs.constants.X_OK);
             return p;
+        } catch (e) {
+            // keep looking
         }
     }
-    
-    // Fallback
-    return path.join(process.resourcesPath, 'dist', 'epp');
+    return null;
 }
 
-eppPath = getEppPath();
+// Resolve how to run .epp files:
+//   1. A bundled native binary (PyInstaller dist/epp)
+//   2. The interpreter package next to this app (python3 -m interpreter.epp)
+function resolveRunner() {
+    const binary = findBundledBinary();
+    if (binary) {
+        return { command: binary, args: [] };
+    }
+    const pkgDir = path.join(__dirname, '..', 'interpreter');
+    if (fs.existsSync(path.join(pkgDir, 'epp.py'))) {
+        return { command: 'python3', args: ['-m', 'interpreter.epp'], cwd: path.dirname(pkgDir) };
+    }
+    if (process.platform === 'win32') {
+        return { command: 'py', args: ['-3', '-m', 'interpreter.epp'], cwd: path.dirname(pkgDir) };
+    }
+    return { command: 'python3', args: ['-m', 'interpreter.epp'], cwd: null };
+}
 
 app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('disable-gpu');
@@ -143,14 +158,16 @@ ipcMain.handle('delete-file', async (event, filePath) => {
 ipcMain.handle('run-epp', async (event, filePath) => {
     return new Promise((resolve) => {
         const output = [];
-        
+
         if (runningProcess) {
             runningProcess.kill();
             runningProcess = null;
         }
 
-        runningProcess = spawn(eppPath, [filePath], {
-            cwd: path.dirname(filePath)
+        const runner = resolveRunner();
+        runningProcess = spawn(runner.command, [...(runner.args || []), filePath], {
+            cwd: runner.cwd || path.dirname(filePath),
+            env: { ...process.env, PYTHONUNBUFFERED: '1' }
         });
 
         runningProcess.stdout.on('data', (data) => {
@@ -218,44 +235,103 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
     return dialog.showOpenDialog(mainWindow, options);
 });
 
-// AI Chat Integration with Nvidia API (Streaming)
+// AI Chat Integration (Streaming) — OpenAI-compatible endpoint.
+//
+// Configuration (env vars or a config.json next to this file):
+//   EPP_AI_BASE_URL  e.g. https://integrate.api.nvidia.com/v1
+//   EPP_AI_API_KEY   your provider API key (NEVER commit this!)
+//   EPP_AI_MODEL     e.g. meta/llama-3.1-405b-instruct
+function getAiConfig() {
+    let fileConfig = {};
+    try {
+        const cfgPath = path.join(__dirname, 'config.json');
+        if (fs.existsSync(cfgPath)) {
+            fileConfig = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
+        }
+    } catch (e) {
+        console.error('Could not read config.json:', e.message);
+    }
+    return {
+        baseUrl: process.env.EPP_AI_BASE_URL || fileConfig.baseUrl
+            || 'https://integrate.api.nvidia.com/v1',
+        apiKey: process.env.EPP_AI_API_KEY || fileConfig.apiKey || '',
+        model: process.env.EPP_AI_MODEL || fileConfig.model
+            || 'meta/llama-3.1-405b-instruct'
+    };
+}
+
+ipcMain.handle('get-ai-status', async () => {
+    const cfg = getAiConfig();
+    return { configured: Boolean(cfg.apiKey), baseUrl: cfg.baseUrl, model: cfg.model };
+});
+
 ipcMain.handle('chat-with-ai', async (event, messages) => {
     try {
         // Construct the system prompt for e++
         const systemPrompt = {
             role: "system",
-            content: `You are the E++ IDE AI Agent (powered by Llama 3.1 405B).
-Your primary role is to write correct, executable E++ code. E++ is an English-like language without braces.
-Blocks are delimited by indentation and colons.
+            content: `You are the E++ IDE AI Agent. Your primary role is to write correct, executable E++ code.
+E++ is an English-like language without braces. Blocks are delimited by indentation (4 spaces) and colons.
 Comments start with \`#\` or \`//\`.
 
-### KEY SYNTAX & STDLIB:
-- Math/Comparisons: \`==\`, \`!=\`, \`>\`, \`<\`, \`>=\`, \`<=\`, \`+\`, \`-\`, \`*\`, \`/\`, \`and\`, \`or\`, \`not\`.
-- Standard Library: \`fetch(url)\`, \`parse_json(str)\`, \`read_file\`, \`write_file\`, \`append_file\`, \`len\`, \`range\`, \`push\`, \`pop\`, \`split\`, \`join\`, \`replace\`, \`trim\`, \`type\`, \`str\`, \`int\`, \`float\`, \`random\`, \`time\`, \`sleep\`.
+### CORE SYNTAX:
+- Variables: \`x = 10\`, \`name = "Alice"\` (compound: \`+=\`, \`-=\`, \`*=\`, \`/=\`)
+- Say: \`say "Hello"\` or \`say("Hello")\`
+- String interpolation: \`say "Hello {name}, {age + 1} years"\`
+- Input: \`name = input("Your name? ")\`
+- Comparisons: \`is\`, \`is not\`, \`is equal to\`, \`is not equal to\`, \`is greater than\`, \`is less than\`, \`>=\`, \`<=\`, \`==\`, \`!=\`
+- Math: \`+\`, \`-\`, \`*\`, \`/\`, \`%\` (modulo), \`^\` (power), \`and\`, \`or\`, \`not\`
+- Conditionals: if/elif/else with colons and indentation
+- Loops: \`for i in range(10):\`, \`while x < 10:\`, \`repeat 5 times:\` plus \`break\` / \`continue\`
+- Switch:
+\`\`\`epp
+switch day:
+    case "Sat", "Sun":
+        say "weekend"
+    default:
+        say "weekday"
+\`\`\`
+- Functions: \`func add(a, b): return a + b\`
+- Classes: \`class Dog:\` with \`func init(name):\` using \`self.name = name\`; methods can take arguments
+- Lists & dicts with indexing from 0 and negative indexing: \`items[0]\`, \`items[-1]\`, \`user["name"]\`, \`matrix[1][2]\`
+- Error handling: \`try:\` ... \`catch err:\` ...
+- Imports: \`import "utils.epp"\`
 
-### STRICT GUI SYNTAX DICTIONARY:
-You are ONLY allowed to use the following exact parameters for GUI keywords. Do NOT invent parameters like "background_color", "font_color", "font", "align", etc. Use ONLY the literal words shown below in brackets.
+### STDLIB:
+\`len\`, \`range\`, \`push\`, \`pop\`, \`keys\`, \`values\`, \`contains\`, \`index_of\`, \`sort\`, \`reversed\`, \`sum\`, \`slice\`,
+\`split\`, \`join\`, \`trim\`, \`replace\`, \`upper\`, \`lower\`, \`type\`, \`str\`, \`int\`, \`float\`, \`bool\`,
+\`abs\`, \`round\`, \`floor\`, \`ceil\`, \`pow\`, \`sqrt\`, \`min\`, \`max\`, \`random\`, \`random_int(a, b)\`, \`shuffle\`,
+\`time\`, \`clock\`, \`sleep\`, \`read_file\`, \`write_file\`, \`append_file\`, \`exists\`, \`delete_file\`,
+\`fetch(url)\`, \`fetch_json(url)\`, \`parse_json(str)\`, \`to_json(obj)\`
 
-1. window: \`window "Title" width 400 height 300 [color "bg_color"] [resizable true|false]\`
-2. label: \`label "text" at X Y [font_size N] [color "text_color"] [id "name"]\`
-3. button: \`button "text" at X Y [width W] [height H] [on_click function_name] [color "bg_color"] [id "name"]\`
+### GUI SYNTAX (desktop apps):
+1. window: \`window "Title" width 400 height 300 [color "bg"] [resizable true] [id "win"]\`
+2. label: \`label "text" at X Y [font_size N] [color "c"] [id "name"]\`
+3. button: \`button "text" at X Y [width W] [height H] [on_click func] [color "c"] [id "name"]\`
 4. input: \`input "id" at X Y [width W] [placeholder "text"] [password]\`
 5. image: \`image "path.png" at X Y [width W] [height H]\`
 6. textbox: \`textbox "id" at X Y width W height H\`
-7. checkbox: \`checkbox "id" text "label" at X Y [on_change function_name]\`
-8. dropdown: \`dropdown "id" options ["A", "B"] at X Y [on_change function_name]\`
+7. checkbox: \`checkbox "id" text "label" at X Y [on_change func]\`
+8. dropdown: \`dropdown "id" options ["A", "B"] at X Y [on_change func]\`
+9. slider: \`slider "id" from 0 to 100 at X Y [on_change func]\`
+10. progress: \`progress "id" at X Y width W\` + \`set_progress "id" to 50\`
+
+### CANVAS & ANIMATION (great for games/drawings):
+- \`canvas "cv" width 400 height 300 color "white"\`
+- \`draw line on "cv" from X1 Y1 to X2 Y2 [color "red"] [width 2]\`
+- \`draw rectangle on "cv" from X1 Y1 to X2 Y2 [color "c"] [fill "c"]\`
+- \`draw circle on "cv" at CX CY size R [color "c"] [fill "c"]\`
+- \`draw dot on "cv" at X Y [color "c"]\`
+- \`draw text on "cv" at X Y text "hi" [color "c"]\`
+- \`clear_canvas "cv"\`
+- Animation loop: \`every 50 milliseconds call tick\` (repeating) or \`after 2000 milliseconds call boom\` (once)
 
 ### GUI COMMANDS:
-- \`set_text "id" to "value"\`
-- \`value = get_text "id"\`
-- \`set_color "id" to "red"\`
-- \`set_visible "id" false\`
-- \`alert "Message"\`
-- \`show_window\`
+- \`set_text "id" to value\` · \`value = get_text "id"\` · \`set_color "id" to "red"\`
+- \`set_visible "id" false\` · \`alert "msg"\` · \`show_window\` · \`beep\` or \`beep 880 150\`
 
 ### CRITICAL RULES:
-1. E++ CANNOT BUILD PAINT APPS OR GAMES. There is NO canvas, NO draw_circle, NO get_mouse_x. If asked to build a paint app, gracefully refuse and explain E++ is for form-based GUI apps only.
-2. ALWAYS output full, complete files wrapped in markdown \`\`\`epp blocks. 
+1. ALWAYS output full, complete files wrapped in markdown \`\`\`epp blocks.
 Example:
 \`\`\`epp
 window "App" width 400 height 300 color "black"
@@ -266,19 +342,32 @@ func close_func():
     alert "Goodbye"
 show_window
 \`\`\`
-DO NOT output raw code as plain text. You MUST use the markdown block, otherwise the IDE auto-apply engine will fail.`
+DO NOT output raw code as plain text — use markdown blocks so the IDE auto-apply works.
+2. GUI callbacks are functions defined with \`func name():\` and referenced by NAME only (no quotes, no parentheses) in on_click/on_change.
+3. Every program that opens widgets should end with \`show_window\`.
+4. Prefer string interpolation \`"{x}"\` over concatenation for readability.`
         };
 
         const apiMessages = [systemPrompt, ...messages];
 
-        const response = await net.fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        const cfg = getAiConfig();
+        if (!cfg.apiKey) {
+            return {
+                success: false,
+                error: 'No AI API key configured. Set the EPP_AI_API_KEY environment variable '
+                    + 'or create epp-ide/config.json with {"apiKey": "...", "baseUrl": "...", "model": "..."}. '
+                    + 'Any OpenAI-compatible provider works (Nvidia NIM, OpenAI, Groq, Ollama...).'
+            };
+        }
+
+        const response = await net.fetch(cfg.baseUrl.replace(/\/$/, '') + "/chat/completions", {
             method: "POST",
             headers: {
-                "Authorization": "Bearer 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",
+                "Authorization": `Bearer ${cfg.apiKey}`,
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                model: "meta/llama-3.1-405b-instruct",
+                model: cfg.model,
                 messages: apiMessages,
                 temperature: 0.2,
                 top_p: 0.7,
@@ -293,26 +382,30 @@ DO NOT output raw code as plain text. You MUST use the markdown block, otherwise
         }
 
         let fullContent = "";
-        
+        let sseBuffer = "";
+
         // Use an async iterator to read chunks
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8");
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
+            sseBuffer += decoder.decode(value, { stream: true });
+            const lines = sseBuffer.split('\n');
+            sseBuffer = lines.pop();  // keep the (possibly) partial last line
             for (const line of lines) {
-                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
                     try {
-                        const data = JSON.parse(line.substring(6));
-                        if (data.choices && data.choices[0].delta && data.choices[0].delta.content) {
+                        const data = JSON.parse(trimmed.substring(6));
+                        if (data.choices && data.choices[0] && data.choices[0].delta
+                                && data.choices[0].delta.content) {
                             const text = data.choices[0].delta.content;
                             fullContent += text;
                             event.sender.send('ai-stream-chunk', text);
                         }
                     } catch (e) {
-                        // ignore parse errors for partial chunks
+                        // ignore malformed events
                     }
                 }
             }

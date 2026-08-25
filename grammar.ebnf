@@ -1,86 +1,161 @@
-/* e++ Grammar Specification (EBNF) */
+/* e++ Grammar Specification (EBNF) — v2 */
 
 /* === Program Structure === */
-program        → statement* EOF
-statement      → func_def
+program        = { statement } EOF ;
+statement      = func_def
                | class_def
                | if_stmt
-               | for_stmt
+               | repeat_stmt
                | while_stmt
+               | for_stmt
+               | switch_stmt
                | try_catch
+               | break_stmt | continue_stmt
                | return_stmt
                | import_stmt
-               | expr_stmt
+               | gui_stmt
+               | canvas_stmt
+               | timer_stmt
+               | expr_stmt ;
 
 /* === Function Definition === */
-func_def       → "func" IDENT "(" params? ")" ":" block
-params         → IDENT ("," IDENT)*
-func_call      → IDENT "(" args? ")"
-args           → expr ("," expr)*
+func_def       = "func" IDENT "(" [ params ] ")" ":" block ;
+params         = IDENT { "," IDENT } ;
+args           = [ expr { "," expr } ] ;
 
 /* === Class Definition === */
-class_def      → "class" IDENT ":" block
-class_body     → (func_def)*
+class_def      = "class" IDENT ":" class_body ;
+class_body     = INDENT { func_def } DEDENT ;
 
 /* === Control Flow === */
-if_stmt        → "if" expr ":" block
-                ("elif" expr ":" block)*
-                ("else" ":" block)?
+if_stmt        = "if" expr ":" block
+                 { "elif" expr ":" block }
+                 [ "else" ":" block ] ;
 
-for_stmt       → "for" IDENT "in" expr ":" block
+for_stmt       = "for" IDENT "in" expr ":" block ;
 
-while_stmt     → "while" expr ":" block
+while_stmt     = "while" expr ":" block ;
 
-try_catch      → "try" ":" block
-                "catch" IDENT ":" block
+repeat_stmt    = "repeat" expr "times" ":" block ;
+
+switch_stmt    = "switch" expr ":"
+                 INDENT
+                    case_block { case_block } [ default_block ]
+                 DEDENT ;
+case_block     = "case" expr { "," expr } ":" block ;
+default_block  = "default" ":" block ;
+
+try_catch      = "try" ":" block
+                 [ "catch" [ IDENT ] ":" block ] ;
+
+break_stmt     = "break" ;
+continue_stmt  = "continue" ;
 
 /* === Return & Import === */
-return_stmt    → "return" expr?
-import_stmt    → "import" STRING
+return_stmt    = "return" [ expr ] ;
+import_stmt    = "import" STRING ;
+
+/* === GUI Statements === */
+gui_stmt       = window_stmt | label_stmt | button_stmt | input_widget
+               | image_stmt | textbox_stmt | checkbox_stmt | dropdown_stmt
+               | slider_stmt | progress_widget | widget_cmd ;
+
+window_stmt    = "window" expr [ "width" expr ] [ "height" expr ]
+                 [ "color" expr ] [ "resizable" expr ] [ "id" expr ] ;
+label_stmt     = "label" expr "at" expr expr
+                 [ "font_size" expr ] [ "color" expr ] [ "id" expr ] ;
+button_stmt    = "button" expr "at" expr expr
+                 [ "width" expr ] [ "height" expr ]
+                 [ "on_click" IDENT ] [ "color" expr ] [ "id" expr ] ;
+input_widget   = "input" STRING "at" expr expr
+                 [ "width" expr ] [ "placeholder" expr ] [ "password" ] ;
+image_stmt     = "image" STRING "at" expr expr [ "width" expr ] [ "height" expr ] ;
+textbox_stmt   = "textbox" STRING "at" expr expr [ "width" expr ] [ "height" expr ] ;
+checkbox_stmt  = "checkbox" STRING [ "text" expr ] "at" expr expr [ "on_change" IDENT ] ;
+dropdown_stmt  = "dropdown" STRING "options" list_literal "at" expr expr [ "on_change" IDENT ] ;
+slider_stmt    = "slider" STRING [ "from" expr ] [ "to" expr ]
+                 "at" expr expr [ "on_change" IDENT ] ;
+progress_widget= "progress" STRING "at" expr expr [ "width" expr ] ;
+
+widget_cmd     = set_text_cmd | set_color_cmd | set_visible_cmd
+               | set_progress_cmd | get_text_expr | show_window_stmt
+               | alert_stmt | beep_stmt ;
+set_text_cmd    = "set_text" expr "to" expr ;
+set_color_cmd   = "set_color" expr "to" expr ;
+set_visible_cmd = "set_visible" expr expr ;
+set_progress_cmd= "set_progress" expr "to" expr ;
+get_text_expr   = "get_text" STRING ;            (* usable as expression too *)
+show_window_stmt= "show_window" ;
+alert_stmt      = "alert" expr ;
+beep_stmt       = "beep" [ NUMBER ] [ NUMBER ] ;
+
+/* === Canvas & Timers === */
+canvas_stmt    = "canvas" STRING [ "width" expr ] [ "height" expr ] [ "color" expr ] ;
+canvas_draw    = "draw" SHAPE "on" STRING draw_args { draw_option } ;
+SHAPE          = "line" | "rectangle" | "circle" | "oval" | "dot" | "text" ;
+draw_args      = ( "from" expr expr "to" expr expr )      (* line, rectangle *)
+               | ( "at" expr expr [ "size" expr ] )       (* circle, oval, dot, text *) ;
+draw_option    = ( "color" expr | "fill" expr | "width" expr | "text" expr ) ;
+clear_canvas   = "clear_canvas" STRING ;
+
+timer_stmt     = every_timer | after_timer ;
+every_timer    = "every" NUMBER ( "milliseconds" | "ms" | "second" | "seconds" )
+                 "call" IDENT ;
+after_timer    = "after"  NUMBER ( "milliseconds" | "ms" | "second" | "seconds" )
+                 "call" IDENT ;
 
 /* === Blocks & Scopes === */
-block          → INDENT statement* DEDENT
+block          = INDENT { statement } DEDENT | statement NEWLINE ;
 
-/* === Expressions === */
-expr           → assignment
-assignment     → IDENT "=" expr
-               | comparison
-comparison     → term (("is greater than" | "is less than" | "is equal to"
-                            | "is greater than or equal to" | "is less than or equal to"
-                            | "is" | "is not") term)*
-term           → factor (("and" | "or") factor)*
-factor         → unary (("+" | "-" | "*" | "/") unary)*
-unary          → "not" unary | primary
-primary        → NUMBER | STRING | "true" | "false" | "null"
-               | IDENT | func_call | "." access
-               | "(" expr ")" | list_literal | dict_literal
+/* === Expressions ===
+   Precedence (loosest → tightest):
+     or → and → comparison → + - → * / % ^ → unary → postfix → primary
+*/
+expr           = assignment ;
+assignment     = or_expr assign_op assignment | or_expr ;
+assign_op      = "=" | "+=" | "-=" | "*=" | "/=" | "%=" ;
+or_expr        = and_expr { "or"  and_expr } ;
+and_expr       = comparison { "and" comparison } ;
+comparison     = additive { comp_op additive } ;
+comp_op        = "is greater than or equal to" | "is less than or equal to"
+               | "is greater than" | "is less than"
+               | "is equal to" | "is not equal to" | "is not" | "is"
+               | ">=" | "<=" | ">" | "<" | "==" | "!=" ;
+additive       = multiplicative { ("+" | "-") multiplicative } ;
+multiplicative = unary { ("*" | "/" | "%" | "^") unary } ;
+unary          = ("not" | "-") unary | postfix ;
+postfix        = primary { "[" expr "]" | "." IDENT [ "(" args ")" ]
+                           | STRING [ "," args ] };   (* bare-call shorthand *)
+primary        = NUMBER | STRING | "true" | "false" | "null" | IDENT
+               | func_call | "(" expr ")"
+               | list_literal | dict_literal | get_text_expr | input_call ;
+list_literal   = "[" [ expr { "," expr } ] "]" ;
+dict_literal   = "{" [ pair { "," pair } ] "}" ;
+pair           = expr ":" expr ;
+func_call      = IDENT "(" args ")" ;
+input_call     = "input" "(" args ")" ;
 
-list_literal   → "[" expr ("," expr)* "]"
-dict_literal   → "{" pair ("," pair)* "}"
-pair           → expr ":" expr
-
-/* === Members & Access === */
-access         → "." IDENT ("(" args? ")")?
-
-/* === Operators === */
-/*
-   is               → equality (==)
-   is not           → inequality (!=)
-   is greater than  → >
-   is less than     → <
-   is equal to      → ==
-   is greater than or equal to → >=
-   is less than or equal to    → <=
-   and              → &&
-   or               → ||
-   not              → !
+/* === Operators: English ↔ symbol equivalents ===
+   is                              → ==
+   is not / is not equal to        → !=
+   is greater than                 → >
+   is less than                    → <
+   is equal to                     → ==
+   is greater than or equal to     → >=
+   is less than or equal to        → <=
+   and                             → &&
+   or                              → ||
+   not                             → !
 */
 
 /* === Tokens === */
-IDENT          → letter+
-NUMBER         → digit+
-STRING         → "\"" any*"\""
-COMMENT         → "#" any* NEWLINE
-INDENT         → "\t" or "    " (4 spaces)
-NEWLINE        → "\n"
-EOF            → end of file
+IDENT          = (letter | "_") { letter | digit | "_" } ;
+NUMBER         = digit { digit } [ "." digit { digit } ] ;
+STRING         = '"' { any - '"' | escape } '"'
+               | "'" { any - "'" | escape } "'" ;
+escape         = "\\" any ;
+COMMENT        = "#" { any } NEWLINE | "//" { any } NEWLINE ;
+INDENT         = 4 spaces (relative to enclosing block) ;
+DEDENT         = ends the current indented block ;
+NEWLINE        = "\n"          (* ignored inside (...) [...] {...} *)
+EOF            = end of file ;

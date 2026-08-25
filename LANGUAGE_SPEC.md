@@ -1,8 +1,8 @@
-# e++ Language Specification
+# e++ Language Specification (v2)
 
 ## Overview
 
-e++ (pronounced "e plus plus") is a beginner-friendly programming language designed to be the easiest language to learn in the world. It features English-like syntax, indentation-based structure, and modern programming constructs.
+e++ (pronounced "e plus plus") is a beginner-friendly programming language designed to be the easiest language to learn in the world. It features English-like syntax, indentation-based structure, modern programming constructs, a built-in desktop GUI framework, and canvas drawing/animation.
 
 **Design Goals:**
 - Readable like English prose
@@ -19,7 +19,8 @@ say "Hello, World!"
 
 ### Comments
 ```epp
-# This is a single-line comment
+# This is a hash comment
+// This is also a comment
 ```
 
 ### Variables
@@ -30,6 +31,14 @@ age = 25
 pi = 3.14
 is_active = true
 empty = null
+
+# Compound assignment works too
+score = 10
+score += 5    # same as score = score + 5
+score -= 3
+score *= 2
+score /= 4
+score %= 7
 ```
 
 ### Data Types
@@ -44,48 +53,57 @@ empty = null
 | `dict` | `{"name": "Bob", "age": 30}` | Key-value pairs |
 | `null` | `null` | Empty or no value |
 
-### Printing Output
+### Printing Output & String Interpolation
 ```epp
 say "Hello!"
 say "Value: " + 42
-say "Sum: " + (5 + 3)
+
+# Interpolation: put any expression inside {curly braces}
+name = "World"
+say "Hello, {name}!"                 # Hello, World!
+say "2 + 2 is {2 + 2}"               # 2 + 2 is 4
+user = {"name": "Zoe"}
+say "Hi {user['name'].upper()}!"     # Hi ZOE!
 ```
+> Tip: use single quotes for strings inside `{}` — nested double quotes are not allowed.
 
 ### Getting Input
 ```epp
 name = input("Enter your name: ")
-say "Hello, " + name
+say "Hello, {name}!"
+
+age = int(input("Age: "))
+if age >= 18:
+    say "adult"
 ```
 
 ## Operators
 
 ### Arithmetic
 ```epp
-a = 10 + 5    # addition
+a = 10 + 5    # addition (also joins strings)
 b = 10 - 3    # subtraction
 c = 4 * 2     # multiplication
-d = 15 / 3    # division
-e = 17 % 5    # modulo (remainder)
+d = 15 / 3    # division (whole results stay whole: 15 / 3 → 5)
+e = 17 % 5    # modulo (remainder) → 2
+f = 2 ^ 10    # power → 1024
 ```
 
-### Comparison (English-like)
+### Comparison (English AND symbols both work)
 ```epp
-if x is greater than 10:
-    say "big"
+if x > 10:                    # or: x is greater than 10
+if name == "Alice":           # or: name is equal to "Alice"
+if age < 18:                  # or: age is less than 18
+if score >= 60:               # or: score is greater than or equal to 60
 
-if name is equal to "Alice":
-    say "Hi Alice!"
-
-if age is less than 18:
-    say "minor"
-
-if score is greater than or equal to 60:
-    say "passed"
+x = 5 != 3                    # true   (or: 5 is not equal to 3)
+y = 4 <= 4                    # true   (or: 4 is less than or equal to 4)
+z = "a" is not "b"            # true
 ```
 
-### Boolean (Words only)
+### Boolean Logic
 ```epp
-if x is greater than 10 and x is not equal to 15:
+if x > 10 and x != 15:
     say "valid"
 
 if is_sunny or is_warm:
@@ -94,6 +112,7 @@ if is_sunny or is_warm:
 if not is_raining:
     say "go outside"
 ```
+Precedence (loosest to tightest): `or` → `and` → comparisons → `+ -` → `* / % ^` → `not` / unary `-`.
 
 ### Truthy/Falsy
 Python-like rules apply:
@@ -109,42 +128,78 @@ if my_list:         # true if list is not empty
 
 ### If / Elif / Else
 ```epp
-if temperature is greater than 30:
+if temperature > 30:
     say "hot"
-elif temperature is greater than 20:
+elif temperature > 20:
     say "comfortable"
-elif temperature is greater than 10:
-    say "cool"
 else:
-    say "cold"
+    say "cool"
 ```
 
 ### For Loop
 ```epp
-# Loop through a range
 for i in range(5):
     say i
 
-# Loop through a list
 fruits = ["apple", "banana", "cherry"]
 for fruit in fruits:
     say fruit
 ```
 
+### Repeat Loop
+```epp
+repeat 3 times:
+    say "echo"
+countdown = 5
+repeat countdown times:
+    say "tick"
+```
+
 ### While Loop
 ```epp
 count = 0
-while count is less than 5:
+while count < 5:
     say count
-    count = count + 1
+    count += 1
+```
+
+### Break & Continue
+```epp
+for i in range(10):
+    if i == 3:
+        continue      # skip this iteration
+    if i == 6:
+        break         # leave the loop entirely
+    say i             # prints 0 1 2 4 5
+```
+
+### Switch
+Cases can list multiple values separated by commas; `default` runs when nothing matches. Each case is exclusive — no fall-through.
+```epp
+switch day:
+    case "Saturday", "Sunday":
+        say "weekend!"
+    case "Friday":
+        say "almost there"
+    default:
+        say "workday"
 ```
 
 ### Try / Catch
+The catch variable is optional, and so is the whole catch block. `return` inside a try block works correctly.
 ```epp
 try:
     result = 10 / 0
 catch error:
-    say "Error occurred: " + error
+    say "Error occurred: {error}"
+
+try:
+    risky()
+catch:
+    say "something went wrong"
+
+try:
+    log("checkpoint")     # errors here are simply ignored
 ```
 
 ## Functions
@@ -152,20 +207,23 @@ catch error:
 ### Defining Functions
 ```epp
 func greet(name):
-    say "Hello, " + name
+    say "Hello, {name}!"
 
 func add(a, b):
     return a + b
 
 func square(x):
-    return x * x
+    return x ^ 2
 ```
 
 ### Calling Functions
+Parentheses are the normal style. Functions whose first argument is a string can also be called with a bare string shorthand:
 ```epp
 greet("World")
 result = add(5, 3)
-area = square(4)
+
+read_file "notes.txt"                  # same as read_file("notes.txt")
+write_file "out.txt", "hello there"    # extra args follow a comma
 ```
 
 ### Built-in Functions
@@ -175,185 +233,208 @@ area = square(4)
 - `input(prompt)` — Get user input
 
 **Type Conversion:**
-- `type(x)` — Return type name as string
-- `str(x)` — Convert to string
-- `int(x)` — Convert to integer
-- `float(x)` — Convert to float
-- `bool(x)` — Convert to boolean
+- `type(x)` · `str(x)` · `int(x)` · `float(x)` · `bool(x)`
 
 **Collections:**
-- `len(x)` — Return length of list or string
-- `range(n)` — Return list from 0 to n-1
-- `push(list, item)` — Add item to list
-- `pop(list)` — Remove and return last item
-- `keys(dict)` — Return list of dict keys
-- `values(dict)` — Return list of dict values
+- `len(x)` · `range(n)` / `range(start, stop, step)` · `push(list, item)` · `pop(list)`
+- `contains(container, item)` · `index_of(list, item)`
+- `sort(list)` (returns sorted copy) · `reversed(list_or_string)` · `sum(numbers)` · `slice(seq, start, end)`
+- `keys(dict)` · `values(dict)`
 
 **Strings:**
-- `split(str, delimiter)` — Split string into list
-- `join(list, delimiter)` — Join list into string
-- `trim(str)` — Remove leading/trailing whitespace
-- `replace(str, old, new)` — Replace substring
+- `split(str, delimiter)` · `join(list, delimiter)` · `trim(str)` · `replace(str, old, new)`
+- `upper(str)` · `lower(str)`
 
 **Files:**
-- `read_file(path)` — Read entire file as string
-- `write_file(path, content)` — Write content to file (overwrites)
-- `append_file(path, content)` — Append content to file
-- `exists(path)` — Return true if file exists
-- `delete_file(path)` — Delete a file
+- `read_file(path)` · `write_file(path, content)` · `append_file(path, content)`
+- `exists(path)` · `delete_file(path)`
+
+**Math:**
+- `abs(n)` · `round(n, digits?)` · `floor(n)` · `ceil(n)` · `pow(a, b)` · `sqrt(n)` · `min(...)` · `max(...)`
 
 **System:**
-- `random()` — Return random float 0-1
-- `time()` — Return current timestamp
-- `sleep(seconds)` — Pause execution
+- `random()` · `random_int(lo, hi)` · `shuffle(list)` · `time()` · `clock()` · `sleep(seconds)`
+
+**Networking & JSON:**
+- `fetch(url)` — raw response text
+- `fetch_json(url)` — parsed JSON in one step
+- `parse_json(text)` · `to_json(obj)`
+
+### Built-in Methods on Values
+```epp
+nums = [3, 1, 2]
+nums.push(4)          nums.pop()      nums.len()
+nums.contains(1)      nums.index_of(2)  nums.first()  nums.last()
+nums.sort()           nums.reverse()
+
+s = "Hello"
+s.upper()   s.lower()   s.trim()    s.contains("ell")
+s.starts_with("He")     s.ends_with("lo")
+s.replace("l", "L")     s.split("l")    s.index_of("o")   s.len()
+
+d = {"a": 1}
+d.keys()    d.values()  d.contains("a")   d.remove("a")   d.len()
+```
+
+## Indexing
+
+Lists and strings index from 0; negative indexes count from the end. Dicts are indexed by key. Chained indexing and assignment work everywhere.
+```epp
+nums = [10, 20, 30]
+say nums[0]          # 10
+say nums[-1]         # 30
+nums[1] = 99
+
+matrix = [[1, 2], [3, 4]]
+say matrix[1][0]     # 3
+
+person = {"name": "Ada"}
+say person["name"]   # Ada
+person["age"] = 36
+
+word = "e++"
+say word[0]          # e
+```
 
 ## Classes
 
-### Defining Classes
+Methods take arguments like regular functions, and constructors validate their argument count.
 ```epp
 class Animal:
-    func init(name):
+    func init(name, sound):
         self.name = name
+        self.sound = sound
 
     func speak():
-        say self.name + " makes a sound"
-```
+        return "{self.name} says {self.sound}"
 
-### Using Classes
-```epp
-dog = Animal("Rex")
-dog.speak()
-say dog.name
-```
+    func speak_to(other):
+        return self.sound + " at " + other.name
 
-### Class Methods
-```epp
-class Counter:
-    func init():
-        self.count = 0
-
-    func increment():
-        self.count = self.count + 1
-
-    func get_count():
-        return self.count
-
-counter = Counter()
-counter.increment()
-counter.increment()
-say counter.get_count()  # prints 2
+dog = Animal("Rex", "Woof")
+cat = Animal("Tom", "Meow")
+say dog.speak()
+say dog.speak_to(cat)
 ```
 
 ## Import
 
-### Importing Files
 ```epp
 import "utils.epp"
 ```
-Search order: current folder, then `lib/` folder.
+Search order: the importing file's folder, then the interpreter's `lib/` folder. Each file executes only once per run, and circular imports are detected with a friendly error.
 
-### Example utils.epp
+## Desktop GUI Framework
+
+GUI programs build widgets top-to-bottom and end with `show_window`.
 ```epp
-func add(a, b):
-    return a + b
+window "My App" width 400 height 300 color "white" id "win"
 
-func multiply(a, b):
-    return a * b
+label "Enter your name:" at 20 20 font_size 14
+input "name_box" at 20 50 width 200 placeholder "type here..." password?
+button "Go" at 20 90 width 120 height 40 on_click go color "lightgray" id "gobtn"
+checkbox "agree" text "I agree" at 20 150 on_change toggle
+dropdown "choice" options ["Red", "Green"] at 20 180 on_change pick
+textbox "notes" at 20 210 width 300 height 100
+image "logo.png" at 240 20 width 100 height 100
+slider "vol" from 0 to 100 at 20 330 on_change volume
+progress "bar" at 250 330 width 120
+
+func go():
+    alert "Hello {get_text('name_box')}!"
+    set_text "gobtn" to "Clicked!"
+    set_color "win" to "#ffeecc"
+    set_visible "gobtn" false
+
+show_window
 ```
 
-## Standard Library — Full Reference
+Widget reference:
 
-### Output Functions
-| Function | Description | Example |
-|----------|-------------|---------|
-| `say(value)` | Print value to output | `say "Hello"` |
+| Statement | Parameters |
+|-----------|-----------|
+| `window` | `"Title"` `width` `height` `[color]` `[resizable]` `[id]` |
+| `label` | `"text"` `at X Y` `[font_size N]` `[color]` `[id]` |
+| `button` | `"text"` `at X Y` `[width]` `[height]` `[on_click fn]` `[color]` `[id]` |
+| `input` | `"id"` `at X Y` `[width]` `[placeholder "..."]` `[password]` |
+| `image` | `"path"` `at X Y` `[width]` `[height]` |
+| `textbox` | `"id"` `at X Y` `[width]` `[height]` |
+| `checkbox` | `"id"` `[text "..."]` `at X Y` `[on_change fn]` |
+| `dropdown` | `"id"` `options [...]` `at X Y` `[on_change fn]` |
+| `slider` | `"id"` `[from A]` `[to B]` `at X Y` `[on_change fn]` |
+| `progress` | `"id"` `at X Y` `[width W]` |
 
-### Input Functions
-| Function | Description | Example |
-|----------|-------------|---------|
-| `input(prompt)` | Get user input | `name = input("Name: ")` |
+Commands: `set_text "id" to v` · `v = get_text "id"` · `set_color "id" to "red"` · `set_visible "id" false` · `set_progress "id" to 50` · `alert "msg"` · `beep [freq] [ms]` · `show_window`
 
-### Type Functions
-| Function | Description | Example |
-|----------|-------------|---------|
-| `type(x)` | Return type name | `type(42) → "int"` |
-| `str(x)` | Convert to string | `str(3.14) → "3.14"` |
-| `int(x)` | Convert to int | `int("42") → 42` |
-| `float(x)` | Convert to float | `float("3.14") → 3.14` |
-| `bool(x)` | Convert to bool | `bool("") → false` |
+## Canvas Drawing & Animation
 
-### Collection Functions
-| Function | Description | Example |
-|----------|-------------|---------|
-| `len(x)` | Get length | `len([1,2,3]) → 3` |
-| `range(n)` | Create range | `range(5) → [0,1,2,3,4]` |
-| `push(list, item)` | Add to list | `push(my_list, 4)` |
-| `pop(list)` | Remove last | `pop(my_list)` |
-| `keys(dict)` | Dict keys | `keys({"a":1}) → ["a"]` |
-| `values(dict)` | Dict values | `values({"a":1}) → [1]` |
+```epp
+window "Demo" width 420 height 340 color "black"
+canvas "cv" width 400 height 300 color "midnightblue"
 
-### String Functions
-| Function | Description | Example |
-|----------|-------------|---------|
-| `split(str, delim)` | Split string | `split("a,b", ",") → ["a","b"]` |
-| `join(list, delim)` | Join list | `join(["a","b"], "-") → "a-b"` |
-| `trim(str)` | Remove spaces | `trim("  hi  ") → "hi"` |
-| `replace(str, old, new)` | Replace text | `replace("hi hi", "hi", "yo") → "yo yo"` |
+draw line on "cv" from 0 0 to 400 300 color "cyan" width 2
+draw rectangle on "cv" from 20 20 to 120 120 color "white" fill "gray"
+draw circle on "cv" at 200 150 size 50 color "yellow" fill "orange"
+draw dot on "cv" at 300 80 color "pink"
+draw text on "cv" at 30 280 text "Hello canvas!" color "white"
+clear_canvas "cv"
 
-### File Functions
-| Function | Description | Example |
-|----------|-------------|---------|
-| `read_file(path)` | Read file | `content = read_file("test.txt")` |
-| `write_file(path, content)` | Write file | `write_file("out.txt", "hi")` |
-| `append_file(path, content)` | Append | `append_file("log.txt", "log")` |
-| `exists(path)` | Check existence | `exists("data.txt")` |
-| `delete_file(path)` | Delete file | `delete_file("temp.txt")` |
+every 100 milliseconds call tick      # repeating timer
+after 2000 milliseconds call boom     # one-shot timer
 
-### System Functions
-| Function | Description | Example |
-|----------|-------------|---------|
-| `random()` | Random float | `random()` |
-| `time()` | Timestamp | `time()` |
-| `sleep(sec)` | Pause | `sleep(1)` |
+func tick():
+    draw dot on "cv" at random_int(0, 400) random_int(0, 300) color "white"
+
+func boom():
+    beep 880 200
+    alert "boom!"
+
+show_window
+```
+
+Shapes: `line` (`from X1 Y1 to X2 Y2`) · `rectangle` (`from ... to ...`, alias `rect`/`box`) · `circle`/`oval`/`dot` (`at CX CY size R`) · `text` (`at X Y text "..."`). Options: `[color "c"] [fill "c"] [width N]`.
 
 ## Error Messages
 
-e++ provides friendly, beginner-friendly error messages:
-
-**Example errors:**
+Errors point at the offending line and usually include a suggestion:
 ```
-Error at line 5: I expected 'if' here — did you mean 'if'?
-Error at line 10: 'name' is not defined. Did you forget to assign it?
-Error at line 15: Cannot divide by zero
-Error at line 20: 'add' is not a function — it has no return value
+Error at line 3: 'naame' is not defined — Did you forget to assign it?
+Error at line 7: List index 5 out of range (length 3)
+Error at line 12: Cannot divide by zero
+Error at line 2: I expected 'times' here — e.g. repeat 5 times:
+Error: Circular import detected: 'a.epp' imports itself
 ```
+The IDE highlights the line automatically after a failed run.
 
 ## Reserved Words
 
+Hard keywords (never usable as names):
 ```
-func, class, if, elif, else, for, while, return, say,
-in, and, or, not, null, true, false, self,
-import, try, catch, is, is not,
-is greater than, is less than, is equal to,
-is greater than or equal to, is less than or equal to
+func class if elif else for while return say break continue
+in and or not null true false self import try catch
+repeat times switch case default
+```
+Soft keywords (contextual — usable as ordinary variables too):
+```
+input window label button image textbox checkbox dropdown canvas slider progress
+alert show_window set_text set_color set_visible set_progress get_text clear_canvas
+draw every after call beep on with from to at size fill text options
+at width height color font_size id placeholder password resizable on_click on_change
+milliseconds ms second seconds
 ```
 
 ## Grammar Summary
 
+See `grammar.ebnf` for the full grammar. Notable productions:
 ```
-program       → statement*
-statement     → func_def | class_def | if_stmt | for_stmt
-              | while_stmt | try_catch | return_stmt | import_stmt | expr_stmt
-func_def      → "func" IDENT "(" params? ")" ":" block
-class_def     → "class" IDENT ":" block
-if_stmt       → "if" expr ":" block ("elif" expr ":" block)* ("else" ":" block)?
-for_stmt      → "for" IDENT "in" expr ":" block
-while_stmt    → "while" expr ":" block
-try_catch     → "try" ":" block "catch" IDENT ":" block
-return_stmt   → "return" expr?
-import_stmt   → "import" STRING
-block         → INDENT statement* DEDENT
-expr          → assignment | comparison | term | factor | unary | primary
+statement     → func_def | class_def | if_stmt | repeat_stmt | switch_stmt
+              | while_stmt | for_stmt | try_catch | gui_stmt | canvas_stmt
+              | return_stmt | import_stmt | expr_stmt
+switch_stmt   → "switch" expr ":" INDENT case_block* default_block? DEDENT
+repeat_stmt   → "repeat" expr "times" ":" block
+expr          → assignment (right-assoc, supports += -= *= /= %=)
+assignment    → target assign_op expr
+comparison    → term (("is"|"=="|">"|...) term)*
 ```
 
 ## File Extension

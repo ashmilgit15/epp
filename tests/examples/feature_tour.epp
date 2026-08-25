@@ -1,0 +1,43 @@
+# Modern E++ feature tour
+name = "Explorer"
+level = 7
+
+# String interpolation with expressions inside
+say "Welcome back, {name}! You are level {level} ({level * 100} XP)."
+
+# Switch statement
+rank = "Gold"
+switch rank:
+    case "Bronze", "Silver":
+        say "Keep climbing!"
+    case "Gold", "Platinum":
+        say "Nice rank!"
+    default:
+        say "Unknown rank"
+
+# Compound assignment + modulo + power
+xp = 0
+xp += 250
+say "XP: {xp}, doubled: {xp * 2}, 2^10 = {2 ^ 10}, 17 % 5 = {17 % 5}"
+
+# Negative indexing & nested data
+inventory = {
+    "weapons": ["sword", "bow"],
+    "gold": 128
+}
+say "Last weapon: {inventory['weapons'][-1]}"
+say "You carry {inventory['gold']} gold."
+
+inventory["potions"] = 3
+
+# repeat loop
+repeat 3 times:
+    say "Crafting potion... {inventory['potions']} ready!"
+
+# try/catch protects against mistakes
+try:
+    result = 100 / 0
+catch err:
+    say "Oops, that math is impossible: {err}"
+
+say "Tour complete!"

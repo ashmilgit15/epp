@@ -5,332 +5,250 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E++ IDE</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
+        :root {
+            --bg: #1e1e1e;
+            --bg-panel: #252526;
+            --bg-toolbar: #2d2d2d;
+            --border: #3c3c3c;
+            --text: #cccccc;
+            --text-dim: #888888;
+            --accent: #0e639c;
+            --accent-hover: #1177bb;
+            --statusbar: #007acc;
         }
+        [data-theme="light"] {
+            --bg: #ffffff;
+            --bg-panel: #f3f3f3;
+            --bg-toolbar: #dddddd;
+            --border: #c8c8c8;
+            --text: #333333;
+            --text-dim: #777777;
+            --accent: #005fb8;
+            --accent-hover: #0258a8;
+            --statusbar: #005fb8;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; width: 100%; overflow: hidden; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background-color: #1e1e1e;
-            color: #cccccc;
+            background-color: var(--bg);
+            color: var(--text);
         }
         .app-container { display: flex; flex-direction: column; height: 100%; width: 100%; }
+
+        /* ── Toolbar ─────────────────────────────────────────── */
         .toolbar {
-            display: flex;
-            align-items: center;
-            padding: 8px 16px;
-            background-color: #2d2d2d;
-            border-bottom: 1px solid #3c3c3c;
-            gap: 8px;
+            display: flex; align-items: center; padding: 8px 16px;
+            background-color: var(--bg-toolbar);
+            border-bottom: 1px solid var(--border); gap: 8px;
+            flex-wrap: wrap;
         }
         .toolbar button {
-            background-color: #0e639c;
-            color: white;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
+            background-color: var(--accent); color: white;
+            border: none; padding: 6px 16px; border-radius: 4px;
+            cursor: pointer; font-size: 13px;
         }
-        .toolbar button:hover { background-color: #1177bb; }
+        .toolbar button:hover { background-color: var(--accent-hover); }
+        .toolbar button.ghost {
+            background: transparent; border: 1px solid var(--border); color: var(--text);
+        }
+        .toolbar button.ghost:hover { background-color: rgba(128,128,128,0.15); }
         .toolbar button.stop { background-color: #c42b1c; }
         .toolbar button.stop:hover { background-color: #e03e2e; }
         .toolbar button.guide { background-color: #2d8a4e; }
         .toolbar button.guide:hover { background-color: #36a05a; }
-        .toolbar .title { font-size: 14px; font-weight: 600; margin-right: 20px; color: #ffffff; }
+        .toolbar .title { font-size: 14px; font-weight: 600; margin-right: 12px; color: var(--text); }
         .toolbar .spacer { flex: 1; }
-        .toolbar .file-name { font-size: 12px; color: #888; }
+        .toolbar .file-name { font-size: 12px; color: var(--text-dim); }
+
+        /* ── Layout ──────────────────────────────────────────── */
         .main-content { display: flex; flex-direction: row; flex: 1; min-height: 0; min-width: 0; overflow: hidden; align-items: stretch; width: 100%; }
         .sidebar {
-            width: 220px;
-            min-width: 220px;
-            flex-shrink: 0;
-            background-color: #252526;
-            border-right: 1px solid #3c3c3c;
-            display: flex;
-            flex-direction: column;
+            width: 220px; min-width: 120px; flex-shrink: 0;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
         }
+        .resizer-v {
+            width: 4px; cursor: col-resize; background: transparent; flex-shrink: 0;
+        }
+        .resizer-v:hover, .resizer-v.dragging { background-color: var(--statusbar); }
+        .resizer-h {
+            height: 4px; cursor: row-resize; background: transparent; flex-shrink: 0;
+        }
+        .resizer-h:hover, .resizer-h.dragging { background-color: var(--statusbar); }
         .sidebar-header {
-            padding: 12px 16px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #bbbbbb;
-            border-bottom: 1px solid #3c3c3c;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 12px 16px; font-size: 11px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
         }
         .sidebar-header button {
-            background: none;
-            border: none;
-            color: #888;
-            cursor: pointer;
-            font-size: 16px;
-            padding: 0 4px;
+            background: none; border: none; color: var(--text-dim);
+            cursor: pointer; font-size: 16px; padding: 0 4px;
         }
-        .sidebar-header button:hover { color: #fff; }
+        .sidebar-header button:hover { color: var(--text); }
         .file-tree { flex: 1; overflow-y: auto; padding: 8px 0; }
         .file-item {
-            display: flex;
-            align-items: center;
-            padding: 6px 16px;
-            cursor: pointer;
-            font-size: 13px;
+            display: flex; align-items: center; padding: 6px 16px;
+            cursor: pointer; font-size: 13px;
         }
-        .file-item:hover { background-color: #2a2d2e; }
-        .file-item.active { background-color: #37373d; }
+        .file-item:hover { background-color: rgba(128,128,128,0.15); }
+        .file-item.active { background-color: rgba(14,99,156,0.35); }
         .file-item.directory { font-weight: 500; }
         .file-item .icon { margin-right: 8px; font-size: 14px; }
-        .editor-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        .editor-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 200px; }
         #editor { flex: 1; overflow: hidden; }
         .terminal {
-            height: 150px;
-            background-color: #1e1e1e;
-            border-top: 1px solid #3c3c3c;
-            display: flex;
-            flex-direction: column;
+            height: 150px; min-height: 60px;
+            background-color: var(--bg);
+            display: flex; flex-direction: column;
         }
         .terminal-header {
-            display: flex;
-            align-items: center;
-            padding: 8px 16px;
-            background-color: #252526;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #bbbbbb;
+            display: flex; align-items: center; padding: 8px 16px;
+            background-color: var(--bg-panel);
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.5px; color: var(--text-dim);
+            border-top: 1px solid var(--border);
         }
         .terminal-header button {
-            background: none;
-            border: none;
-            color: #888;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: auto;
-            padding: 2px 8px;
+            background: none; border: none; color: var(--text-dim);
+            cursor: pointer; font-size: 12px; margin-left: auto; padding: 2px 8px;
         }
-        .terminal-header button:hover { color: #fff; }
+        .terminal-header button:hover { color: var(--text); }
         .terminal-output {
-            flex: 1;
-            padding: 12px 16px;
+            flex: 1; padding: 12px 16px;
             font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-            font-size: 12px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            font-size: 12px; overflow-y: auto;
+            white-space: pre-wrap; word-wrap: break-word;
         }
+        .terminal-output .err-line { color: #f48771; }
+
         .status-bar {
-            display: flex;
-            align-items: center;
-            padding: 4px 16px;
-            background-color: #007acc;
-            font-size: 12px;
-            color: white;
-            gap: 16px;
+            display: flex; align-items: center; padding: 4px 16px;
+            background-color: var(--statusbar);
+            font-size: 12px; color: white; gap: 16px;
         }
         .status-bar .status-item { display: flex; align-items: center; gap: 4px; }
         .status-bar .spacer { flex: 1; }
+
+        /* ── Context menu ────────────────────────────────────── */
         .context-menu {
-            position: fixed;
-            background-color: #2d2d2d;
-            border: 1px solid #3c3c3c;
-            border-radius: 4px;
-            padding: 4px 0;
-            min-width: 160px;
-            z-index: 1000;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            position: fixed; background-color: var(--bg-toolbar);
+            border: 1px solid var(--border); border-radius: 4px;
+            padding: 4px 0; min-width: 160px; z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
         }
         .context-menu-item { padding: 6px 16px; cursor: pointer; font-size: 12px; }
-        .context-menu-item:hover { background-color: #0e639c; }
-        .context-menu-separator { height: 1px; background-color: #3c3c3c; margin: 4px 0; }
+        .context-menu-item:hover { background-color: var(--accent); color: #fff; }
+        .context-menu-separator { height: 1px; background-color: var(--border); margin: 4px 0; }
         .hidden { display: none !important; }
-        
-        /* Modal */
+
+        /* ── Modals ──────────────────────────────────────────── */
         .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6); z-index: 999;
+            display: flex; align-items: center; justify-content: center;
         }
         .modal {
-            background: #1e1e1e;
-            border: 1px solid #3c3c3c;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 800px;
-            max-height: 80vh;
-            display: flex;
-            flex-direction: column;
+            background: var(--bg); border: 1px solid var(--border);
+            border-radius: 8px; width: 90%; max-width: 900px; max-height: 85vh;
+            display: flex; flex-direction: column;
         }
         .modal-header {
-            display: flex;
-            align-items: center;
-            padding: 16px 20px;
-            background-color: #2d2d2d;
-            border-bottom: 1px solid #3c3c3c;
-            border-radius: 8px 8px 0 0;
+            display: flex; align-items: center; padding: 16px 20px;
+            background-color: var(--bg-toolbar);
+            border-bottom: 1px solid var(--border); border-radius: 8px 8px 0 0;
         }
-        .modal-header h2 { font-size: 16px; color: #fff; }
+        .modal-header h2 { font-size: 16px; color: var(--text); }
         .modal-header button {
-            background: none;
-            border: none;
-            color: #888;
-            cursor: pointer;
-            font-size: 24px;
-            margin-left: auto;
-            padding: 0;
-            line-height: 1;
+            background: none; border: none; color: var(--text-dim);
+            cursor: pointer; font-size: 24px; margin-left: auto; line-height: 1;
         }
-        .modal-header button:hover { color: #fff; }
+        .modal-header button:hover { color: var(--text); }
         .modal-content {
-            padding: 20px;
-            overflow-y: auto;
-            font-size: 13px;
-            line-height: 1.6;
+            padding: 20px; overflow-y: auto; font-size: 13px; line-height: 1.6;
         }
         .modal-content h3 { color: #4fc3f7; margin-top: 16px; margin-bottom: 8px; font-size: 14px; }
         .modal-content h3:first-child { margin-top: 0; }
-        .modal-content code {
-            background: #2d2d2d;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-            font-size: 12px;
+        .modal-content code, .modal-content pre {
+            background: var(--bg-toolbar); border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace; font-size: 12px;
         }
-        .modal-content pre {
-            background: #2d2d2d;
-            padding: 12px;
-            border-radius: 4px;
-            overflow-x: auto;
-            margin: 8px 0;
-            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-            font-size: 12px;
-            line-height: 1.4;
-        }
+        .modal-content code { padding: 2px 6px; }
+        .modal-content pre { padding: 12px; overflow-x: auto; margin: 8px 0; line-height: 1.4; }
         .modal-content table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-        .modal-content th, .modal-content td { border: 1px solid #3c3c3c; padding: 8px 12px; text-align: left; }
-        .modal-content th { background: #2d2d2d; }
+        .modal-content th, .modal-content td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+        .modal-content th { background: var(--bg-toolbar); }
         .modal-content ul { margin: 8px 0; padding-left: 24px; }
-        .modal-content li { margin: 4px 0; }
+
+        /* Examples gallery */
+        .examples-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 12px;
+        }
+        .example-card {
+            background: var(--bg-panel); border: 1px solid var(--border);
+            border-radius: 8px; padding: 14px; cursor: pointer;
+            transition: transform 0.1s, border-color 0.1s;
+        }
+        .example-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+        .example-card .ex-icon { font-size: 24px; margin-bottom: 6px; }
+        .example-card .ex-name { font-weight: 600; margin-bottom: 4px; color: var(--text); }
+        .example-card .ex-desc { font-size: 12px; color: var(--text-dim); }
+
+        /* ── AI sidebar ──────────────────────────────────────── */
         .ai-sidebar {
-            width: 300px;
-            min-width: 300px;
-            max-width: 300px;
-            flex-shrink: 0;
-            background-color: #252526;
-            border-left: 1px solid #333;
-            display: flex;
-            flex-direction: column;
-            color: #ccc;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 300px; min-width: 220px; max-width: 480px; flex-shrink: 0;
+            background-color: var(--bg-panel);
+            border-left: 1px solid var(--border);
+            display: flex; flex-direction: column; color: var(--text);
         }
         .ai-header {
-            padding: 10px;
-            background-color: #333;
-            font-weight: bold;
-            border-bottom: 1px solid #444;
+            padding: 10px; background-color: var(--bg-toolbar);
+            font-weight: bold; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 8px;
         }
-        .ai-messages {
-            flex-grow: 1;
-            padding: 10px;
-            overflow-y: auto;
-            font-size: 13px;
-        }
-        .ai-message {
-            margin-bottom: 10px;
-            line-height: 1.4;
-        }
-        .ai-message.user {
-            color: #4daafc;
-        }
-        .ai-message.assistant {
-            color: #d4d4d4;
-        }
+        .ai-dot { width: 8px; height: 8px; border-radius: 50%; background: #888; flex-shrink: 0; }
+        .ai-dot.ok { background: #2d8a4e; }
+        .ai-dot.off { background: #c42b1c; }
+        .ai-messages { flex-grow: 1; padding: 10px; overflow-y: auto; font-size: 13px; }
+        .ai-message { margin-bottom: 10px; line-height: 1.45; }
+        .ai-message.user { color: #4daafc; }
+        .ai-message.assistant { color: var(--text); }
         .ai-message pre {
-            background-color: #1e1e1e;
-            padding: 8px;
-            border-radius: 4px;
-            overflow-x: auto;
-            margin: 5px 0;
-            border: 1px solid #444;
+            background-color: var(--bg); padding: 8px; border-radius: 4px;
+            overflow-x: auto; margin: 5px 0; border: 1px solid var(--border);
             position: relative;
         }
-        .ai-message code {
-            font-family: 'Consolas', 'Courier New', monospace;
-        }
+        .ai-message code { font-family: 'Consolas', 'Courier New', monospace; }
         .ai-apply-btn {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            background-color: #007acc;
-            color: white;
-            border: none;
-            padding: 2px 6px;
-            font-size: 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            opacity: 0.8;
+            position: absolute; top: 4px; right: 4px;
+            background-color: var(--statusbar); color: white;
+            border: none; padding: 2px 6px; font-size: 10px;
+            border-radius: 3px; cursor: pointer; opacity: 0.85;
         }
-        .ai-apply-btn:hover {
-            opacity: 1;
-            background-color: #005f9e;
-        }
-        .ai-input-container {
-            display: flex;
-            padding: 10px;
-            border-top: 1px solid #333;
-        }
+        .ai-apply-btn:hover { opacity: 1; }
+        .ai-input-container { display: flex; padding: 10px; border-top: 1px solid var(--border); }
         .ai-input {
-            flex-grow: 1;
-            background-color: #3c3c3c;
-            color: #fff;
-            border: 1px solid #555;
-            padding: 8px;
-            border-radius: 3px;
-            resize: none;
-            height: 60px;
+            flex-grow: 1; background-color: var(--bg-toolbar); color: var(--text);
+            border: 1px solid var(--border); padding: 8px; border-radius: 3px;
+            resize: none; height: 60px; font-family: inherit; font-size: 13px;
         }
-        .ai-input:focus {
-            outline: none;
-            border-color: #007acc;
-        }
+        .ai-input:focus { outline: none; border-color: var(--statusbar); }
         .ai-submit {
-            background-color: #007acc;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            margin-left: 5px;
-            border-radius: 3px;
-            cursor: pointer;
+            background-color: var(--statusbar); color: white; border: none;
+            padding: 8px 12px; margin-left: 5px; border-radius: 3px; cursor: pointer;
         }
-        .ai-submit:hover {
-            background-color: #005f9e;
-        }
+        .ai-submit:hover { filter: brightness(1.15); }
         .loader {
-            border: 3px solid #333;
-            border-top: 3px solid #007acc;
-            border-radius: 50%;
-            width: 14px;
-            height: 14px;
+            border: 3px solid var(--border); border-top: 3px solid var(--statusbar);
+            border-radius: 50%; width: 14px; height: 14px;
             animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-left: 5px;
-            vertical-align: middle;
+            display: inline-block; margin-left: 5px; vertical-align: middle;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -343,7 +261,9 @@
             <button id="save-as-btn">Save As</button>
             <button id="run-btn" class="run">Run (F5)</button>
             <button id="stop-btn" class="stop hidden">Stop</button>
+            <button id="examples-btn" class="guide">Examples</button>
             <button id="guide-btn" class="guide">Guide</button>
+            <button id="theme-btn" class="ghost" title="Toggle light/dark theme">&#9788;</button>
             <div class="spacer"></div>
             <span class="file-name" id="current-file">No file opened</span>
         </div>
@@ -356,12 +276,13 @@
                 </div>
                 <div class="file-tree" id="file-tree"></div>
             </div>
-            
-            <div class="resizer" id="resizer"></div>
 
-            <div class="editor-container" style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
-                <div id="editor" style="flex: 1; min-height: 0;"></div>
-                <div class="terminal" style="flex-shrink: 0;">
+            <div class="resizer-v" id="sidebar-resizer"></div>
+
+            <div class="editor-container">
+                <div id="editor"></div>
+                <div class="resizer-h" id="terminal-resizer"></div>
+                <div class="terminal" id="terminal-panel">
                     <div class="terminal-header">
                         <span>Output</span>
                         <button id="clear-terminal">Clear</button>
@@ -369,15 +290,17 @@
                     <div class="terminal-output" id="terminal-output"></div>
                 </div>
             </div>
-            
+
+            <div class="resizer-v" id="ai-resizer"></div>
+
             <!-- AI Sidebar -->
-            <div class="ai-sidebar">
-                <div class="ai-header">E++ AI Agent</div>
+            <div class="ai-sidebar" id="ai-sidebar">
+                <div class="ai-header"><span class="ai-dot" id="ai-dot"></span> E++ AI Agent <span id="ai-model-label" style="font-weight:normal;font-size:11px;color:var(--text-dim)"></span></div>
                 <div class="ai-messages" id="ai-messages">
-                    <div class="ai-message assistant">Hello! I am your E++ AI coding assistant powered by Llama 3.1 70B (Nvidia API). How can I help you build production-level apps today?</div>
+                    <div class="ai-message assistant">Hello! I am your E++ AI coding assistant. I can generate complete E++ programs — console apps, GUI apps and canvas games. Ask away!</div>
                 </div>
                 <div class="ai-input-container">
-                    <textarea class="ai-input" id="ai-input" placeholder="Ask me to write e++ code or build an app..."></textarea>
+                    <textarea class="ai-input" id="ai-input" placeholder="Ask me to write e++ code or build an app...&#10;(Tip: configure EPP_AI_API_KEY to enable me)"></textarea>
                     <button class="ai-submit" id="ai-submit">Send</button>
                 </div>
             </div>
@@ -386,7 +309,7 @@
         <div class="status-bar">
             <div class="status-item" id="status-message">Ready</div>
             <div class="spacer"></div>
-            <div class="status-item">E++</div>
+            <div class="status-item" id="theme-label">E++ v2</div>
             <div class="status-item" id="cursor-pos">Ln 1, Col 1</div>
         </div>
     </div>
@@ -409,113 +332,358 @@
         </div>
     </div>
 
+    <div class="modal-overlay hidden" id="examples-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Example Programs</h2>
+                <button id="close-examples">&times;</button>
+            </div>
+            <div class="modal-content"><div class="examples-grid" id="examples-grid"></div></div>
+        </div>
+    </div>
+
     <script src="node_modules/monaco-editor/min/vs/loader.js"></script>
     <script>
         const GUIDE_CONTENT = `
 <h3>Welcome to E++!</h3>
-<p>E++ is the easiest programming language to learn. It uses English-like syntax.</p>
+<p>E++ is the friendliest programming language on Earth. It reads like English and can build console apps, desktop GUIs, drawings and animations.</p>
 
-<h3>Creating a File</h3>
-<ol>
-<li>Click <strong>New File</strong> in the toolbar</li>
-<li>Choose where to save the file</li>
-<li>Enter a filename ending with <code>.epp</code></li>
-<li>Start coding!</li>
-</ol>
-
-<h3>Basic Syntax</h3>
-<h4>Variables</h4>
+<h3>The Basics</h3>
 <pre>name = "Alice"
 age = 25
-pi = 3.14</pre>
+say "Hello, my name is {name}"   // string interpolation!
+say "Next year I will be " + str(age + 1)</pre>
 
-<h4>Printing</h4>
-<pre>say "Hello, World!"</pre>
-
-<h4>Input</h4>
+<h4>Getting Input</h4>
 <pre>name = input("What is your name? ")
-say "Hello, " + name</pre>
+say "Nice to meet you, {name}!"</pre>
 
-<h4>Conditionals</h4>
-<pre>if x is greater than 10:
-    say "big"
-elif x is equal to 10:
-    say "exact"
+<h4>Conditionals &amp; Comparisons</h4>
+<pre>if age >= 18:               // or: if age is greater than or equal to 18:
+    say "adult"
+elif age == 13:
+    say "teenager"
 else:
-    say "small"</pre>
-
-<h4>Comparison Operators</h4>
-<table>
-<tr><th>English</th><th>Meaning</th></tr>
-<tr><td><code>is</code></td><td>equal (==)</td></tr>
-<tr><td><code>is not</code></td><td>not equal (!=)</td></tr>
-<tr><td><code>is greater than</code></td><td>greater than (&gt;)</td></tr>
-<tr><td><code>is less than</code></td><td>less than (&lt;)</td></tr>
-</table>
+    say "kid"</pre>
 
 <h4>Loops</h4>
 <pre>for i in range(5):
     say i
 
-while count is less than 10:
-    count = count + 1</pre>
+repeat 3 times:
+    say "echo"
 
-<h4>Functions</h4>
+while count &lt; 10:
+    count += 1
+
+for item in ["a", "b", "c"]:
+    if item == "b":
+        continue
+    if item == "c":
+        break
+    say item</pre>
+
+<h4>Switch</h4>
+<pre>switch day:
+    case "Saturday", "Sunday":
+        say "weekend!"
+    default:
+        say "workday"</pre>
+
+<h4>Functions &amp; Classes</h4>
 <pre>func add(a, b):
     return a + b
 
-result = add(5, 3)</pre>
-
-<h4>Classes</h4>
-<pre>class Animal:
+class Animal:
     func init(name):
         self.name = name
-    func speak():
-        say self.name + " speaks!"
+    func speak(sound):
+        return "{self.name} says {sound}!"
 
 dog = Animal("Rex")
-dog.speak()</pre>
+say dog.speak("woof")</pre>
 
-<h3>GUI (Desktop Apps)</h3>
-<p>E++ makes it very easy to build desktop apps using built-in English keywords:</p>
+<h4>Lists &amp; Dictionaries</h4>
+<pre>numbers = [10, 20, 30]
+say numbers[0]          // 10
+say numbers[-1]         // 30 (negative indexing!)
+numbers[0] = 99
+
+person = {"name": "Bob", "age": 30}
+say person["name"]</pre>
+
+<h4>Error Handling</h4>
+<pre>try:
+    x = 10 / 0
+catch err:
+    say "Oops: {err}"</pre>
+
+<h3>GUI Apps</h3>
 <pre>window "My App" width 400 height 300
-
 label "Enter your name:" at 20 20
-input "name_box" at 20 50 width 200
-button "Say Hello" at 20 90 on_click greet
-label "" at 20 140 id "result"
+input "name_box" at 20 50 width 200 placeholder "type here..."
+slider "size" from 10 to 100 at 20 90 on_change resize
+progress "bar" at 20 130 width 300
+set_progress "bar" to 70
+button "Greet" at 20 170 on_click greet
 
 func greet():
     name = get_text "name_box"
-    set_text "result" to "Hello, " + name + "!"
+    alert "Hello, {name}!"
 
 show_window</pre>
-<p>Other widgets include <code>image</code>, <code>textbox</code>, <code>checkbox</code>, <code>dropdown</code>, and functions like <code>alert</code>, <code>set_color</code>, <code>set_visible</code>.</p>
+
+<h3>Canvas Drawing &amp; Animation</h3>
+<pre>window "Demo" width 400 height 340 color "black"
+canvas "cv" width 380 height 260 color "midnightblue"
+draw circle on "cv" at 190 130 size 60 color "yellow" fill "yellow"
+every 500 milliseconds call blink
+
+func blink():
+    draw dot on "cv" at random_int(0, 380) random_int(0, 260) color "white"
+
+show_window</pre>
 
 <h3>Keyboard Shortcuts</h3>
 <ul>
-<li><strong>Ctrl+S</strong> - Save file</li>
-<li><strong>F5</strong> - Run program</li>
+<li><strong>F5 / Ctrl+Enter</strong> — Run program</li>
+<li><strong>Ctrl+S</strong> — Save file</li>
+<li><strong>Ctrl+N</strong> — New file</li>
+<li><strong>Ctrl+Space</strong» — Autocomplete</li>
 </ul>
 `;
 
+        // ── Example gallery data ──────────────────────────────
+        const EXAMPLES = [
+            { icon: '👋', name: 'Hello World', desc: 'Your very first E++ program', code:
+`# My first E++ program!
+name = input("What is your name? ")
+say "Hello, {name}!"
+say "Welcome to the easiest language ever."
+` },
+            { icon: '🎮', name: 'Guess the Number', desc: 'Classic game with loops and logic', code:
+`secret = random_int(1, 100)
+guesses = 0
+say "I am thinking of a number between 1 and 100..."
+
+while true:
+    guess = int(input("Your guess: "))
+    guesses += 1
+    if guess is less than secret:
+        say "Too low!"
+    elif guess is greater than secret:
+        say "Too high!"
+    else:
+        break
+
+say "You got it in {guesses} guesses!"
+` },
+            { icon: '⭐', name: 'Fibonacci', desc: 'Recursion and loops', code:
+`func fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+
+for i in range(15):
+    say "fib({i}) = {fibonacci(i)}"
+` },
+            { icon: '🚦', name: 'Switch Traffic Light', desc: 'The switch statement in action', code:
+`lights = ["Red", "Yellow", "Green"]
+
+for light in lights:
+    switch light:
+        case "Red":
+            say "{light}: STOP"
+        case "Yellow":
+            say "{light}: get ready..."
+        case "Green":
+            say "{light}: GO!"
+` },
+            { icon: '🐕', name: 'OOP Zoo', desc: 'Classes, methods and arguments', code:
+`class Animal:
+    func init(name, sound):
+        self.name = name
+        self.sound = sound
+    func speak():
+        return "{self.name} says {self.sound}"
+
+zoo = [Animal("Dog", "Woof"), Animal("Cat", "Meow"), Animal("Cow", "Moo")]
+for animal in zoo:
+    say animal.speak()
+` },
+            { icon: '🖼️', name: 'GUI Login Form', desc: 'Window, input, button, alerts', code:
+`window "Login" width 360 height 200 color "#f0f0f0"
+label "Username:" at 20 25
+input "user" at 110 20 width 200 placeholder "your name"
+label "Password:" at 20 65
+input "pass" at 110 60 width 200 password
+button "Log In" at 110 105 width 200 height 40 on_click do_login
+
+func do_login():
+    user = get_text "user"
+    pass = get_text "pass"
+    if user == "" or pass == "":
+        alert "Please fill in both fields!"
+    else:
+        alert "Welcome back, {user}!"
+
+show_window
+` },
+            { icon: '🎨', name: 'Canvas Art Studio', desc: 'Drawing shapes on a canvas', code:
+`window "Art Studio" width 520 height 420 color "#222222"
+canvas "cv" width 500 height 340 color "white"
+
+draw rectangle on "cv" from 20 20 to 180 140 color "#e74c3c" fill "#ff7979"
+draw circle on "cv" at 320 80 size 70 color "#2980b9" fill "#74b9ff"
+draw line on "cv" from 20 300 to 480 40 color "#27ae60" width 4
+draw dot on "cv" at 250 170 color "#8e44ad"
+draw text on "cv" at 30 330 text "Made with E++!" color "#555555"
+
+show_window
+` },
+            { icon: '🌌', name: 'Starfield Animation', desc: 'Animated dots using every/timers', code:
+`window "Starfield" width 500 height 400 color "black"
+canvas "cv" width 480 height 360 color "black"
+label "" at 10 370 id "info"
+
+func add_star():
+    colors = ["white", "#aaaaff", "#ffddaa"]
+    pick = colors[random_int(0, 2)]
+    draw dot on "cv" at random_int(0, 480) random_int(0, 360) color pick
+
+func tick():
+    repeat 3 times:
+        add_star()
+    set_text "info" to "Stars so far: {clock()}"
+
+every 100 milliseconds call tick
+show_window
+` },
+            { icon: '📊', name: 'Data Cruncher', desc: 'Lists, sorting, JSON and files', code:
+`scores = [88, 42, 95, 67, 73]
+sorted_scores = sort(scores)
+
+say "Scores: {scores}"
+say "Sorted: {sorted_scores}"
+say "Highest: {max(scores)}, Lowest: {min(scores)}, Average: {sum(scores) / len(scores)}"
+
+data = {"course": "E++ 101", "scores": scores}
+write_file "scores.json", to_json(data)
+say "Saved scores.json!"
+
+loaded = parse_json(read_file "scores.json")
+say "Reloaded course: {loaded["course"]}"
+` },
+            { icon: '⏱️', name: 'Countdown Timer', desc: 'Progress bar + after/one-shot timers', code:
+`window "Timer" width 360 height 160 color "white"
+label "" at 20 20 font_size 28 id "count_label"
+progress "bar" at 20 80 width 300
+beep
+
+func tick():
+    left = int(get_text "count_label")
+    if left <= 0:
+        alert "Time is up!"
+        beep 440 400
+    else:
+        left -= 1
+        set_text "count_label" to left
+        set_progress "bar" to left
+        after 1000 milliseconds call tick
+
+set_text "count_label" to 10
+set_progress "bar" to 10
+after 1000 milliseconds call tick
+show_window
+` },
+        ];
+
+        // ── Autocomplete data ─────────────────────────────────
         const EPP_KEYWORDS = [
             'func', 'class', 'if', 'elif', 'else', 'for', 'while',
             'return', 'say', 'in', 'and', 'or', 'not', 'null',
             'true', 'false', 'self', 'import', 'try', 'catch',
-            // GUI keywords
+            'repeat', 'times', 'switch', 'case', 'default', 'break', 'continue',
             'window', 'label', 'button', 'input', 'image', 'textbox',
             'checkbox', 'dropdown', 'options',
             'at', 'width', 'height', 'color', 'font_size', 'id',
             'on_click', 'on_change', 'placeholder', 'password', 'text',
             'set_text', 'to', 'get_text', 'show_window',
-            'alert', 'set_color', 'set_visible', 'resizable'
+            'alert', 'set_color', 'set_visible', 'resizable',
+            'canvas', 'draw', 'clear_canvas', 'slider', 'progress', 'set_progress',
+            'every', 'after', 'call', 'milliseconds', 'seconds', 'beep',
+        ];
+
+        const EPP_FUNCTIONS = [
+            { label: 'input', detail: 'input(prompt) → string', doc: 'Read a line from the console.', insert: 'input("${1:prompt}")' },
+            { label: 'len', detail: 'len(x) → int', doc: 'Length of a list, string or dict.', insert: 'len($0)' },
+            { label: 'range', detail: 'range(n) → list', doc: 'List of numbers 0..n-1. Also range(start, stop, step).', insert: 'range(${1:10})' },
+            { label: 'push', detail: 'push(list, item)', doc: 'Append an item to a list.', insert: 'push(${1:list}, ${2:item})' },
+            { label: 'pop', detail: 'pop(list) → item', doc: 'Remove and return the last item.', insert: 'pop($1)' },
+            { label: 'keys', detail: 'keys(dict) → list', doc: 'All keys of a dictionary.' },
+            { label: 'values', detail: 'values(dict) → list', doc: 'All values of a dictionary.' },
+            { label: 'contains', detail: 'contains(container, item) → bool', doc: 'Is the item inside a list/string/dict?' },
+            { label: 'index_of', detail: 'index_of(list, item) → int', doc: 'Position of item, or -1 if missing.' },
+            { label: 'sort', detail: 'sort(list) → list', doc: 'Return a sorted copy.' },
+            { label: 'reversed', detail: 'reversed(x) → list/string', doc: 'Return a reversed copy.' },
+            { label: 'sum', detail: 'sum(numbers) → number', doc: 'Total of a list of numbers.' },
+            { label: 'slice', detail: 'slice(seq, start, end)', doc: 'Sub-list or substring.' },
+            { label: 'split', detail: 'split(text, delim) → list', doc: 'Split a string into a list.', insert: 'split(${1:text}, "${2: }")' },
+            { label: 'join', detail: 'join(list, delim) → string', doc: 'Join a list into one string.' },
+            { label: 'trim', detail: 'trim(text) → string', doc: 'Strip whitespace from both ends.' },
+            { label: 'replace', detail: 'replace(text, old, new) → string', doc: 'Replace all occurrences.' },
+            { label: 'upper', detail: 'upper(text) → string', doc: 'Convert to UPPERCASE.' },
+            { label: 'lower', detail: 'lower(text) → string', doc: 'Convert to lowercase.' },
+            { label: 'str', detail: 'str(value) → string', doc: 'Convert anything to a string.' },
+            { label: 'int', detail: 'int(value) → int', doc: 'Convert to a whole number.' },
+            { label: 'float', detail: 'float(value) → float', doc: 'Convert to a decimal number.' },
+            { label: 'bool', detail: 'bool(value) → bool', doc: 'Convert to true/false.' },
+            { label: 'type', detail: 'type(value) → string', doc: '"int", "string", "list"...' },
+            { label: 'abs', detail: 'abs(n) → number', doc: 'Absolute value.' },
+            { label: 'round', detail: 'round(n, digits?) → number', doc: 'Round to nearest (optionally N digits).' },
+            { label: 'floor', detail: 'floor(n) → int', doc: 'Round down.' },
+            { label: 'ceil', detail: 'ceil(n) → int', doc: 'Round up.' },
+            { label: 'pow', detail: 'pow(a, b) → number', doc: 'a raised to power b (same as a ^ b).' },
+            { label: 'sqrt', detail: 'sqrt(n) → float', doc: 'Square root.' },
+            { label: 'min', detail: 'min(...) → number', doc: 'Smallest value(s).' },
+            { label: 'max', detail: 'max(...) → number', doc: 'Largest value(s).' },
+            { label: 'random', detail: 'random() → float', doc: 'Random number between 0 and 1.' },
+            { label: 'random_int', detail: 'random_int(lo, hi) → int', doc: 'Random whole number between lo and hi.', insert: 'random_int(${1:1}, ${2:100})' },
+            { label: 'shuffle', detail: 'shuffle(list)', doc: 'Shuffle a list in place.' },
+            { label: 'time', detail: 'time() → float', doc: 'Seconds since epoch.' },
+            { label: 'clock', detail: 'clock() → string', doc: 'Current date & time as text.' },
+            { label: 'sleep', detail: 'sleep(seconds)', doc: 'Pause the program.' },
+            { label: 'read_file', detail: 'read_file(path) → string', doc: 'Read a whole file.' },
+            { label: 'write_file', detail: 'write_file(path, content)', doc: 'Write (overwrite) a file.' },
+            { label: 'append_file', detail: 'append_file(path, content)', doc: 'Add to the end of a file.' },
+            { label: 'exists', detail: 'exists(path) → bool', doc: 'Does the path exist?' },
+            { label: 'delete_file', detail: 'delete_file(path)', doc: 'Delete a file.' },
+            { label: 'fetch', detail: 'fetch(url) → string', doc: 'Download a web page/API response.' },
+            { label: 'fetch_json', detail: 'fetch_json(url)', doc: 'Download and parse JSON in one step.', insert: 'fetch_json("${1:url}")' },
+            { label: 'parse_json', detail: 'parse_json(text)', doc: 'Parse a JSON string.' },
+            { label: 'to_json', detail: 'to_json(obj) → string', doc: 'Serialize to pretty JSON text.' },
+            { label: 'get_text', detail: 'get_text("id") → string', doc: 'Read the current value of a GUI widget.', insert: 'get_text "${1:id}"' },
+        ];
+
+        const EPP_SNIPPETS = [
+            { label: 'window', detail: 'GUI window boilerplate', insert: 'window "${1:My App}" width ${2:400} height ${3:300}\n${0}' },
+            { label: 'forloop', detail: 'for loop over range', insert: 'for ${1:i} in range(${2:10}):\n    $0' },
+            { label: 'foreach', detail: 'for each over a list', insert: 'for ${1:item} in ${2:items}:\n    $0' },
+            { label: 'repeat', detail: 'repeat N times loop', insert: 'repeat ${1:3} times:\n    $0' },
+            { label: 'ifblock', detail: 'if / else block', insert: 'if ${1:condition}:\n    ${2:pass}\nelse:\n    ${3:pass}' },
+            { label: 'funcdef', detail: 'function definition', insert: 'func ${1:name}(${2:args}):\n    $0' },
+            { label: 'classdef', detail: 'class with constructor', insert: 'class ${1:Name}:\n    func init(${2:args}):\n        ${3:self.x = x}\n\n    func ${4:method}():\n        $0' },
+            { label: 'trycatch', detail: 'try / catch block', insert: 'try:\n    $1\ncatch err:\n    say "Error: {err}"' },
+            { label: 'switchcase', detail: 'switch statement', insert: 'switch ${1:value}:\n    case ${2:"a"}:\n        ${3:pass}\n    default:\n        ${4:pass}' },
+            { label: 'timer', detail: 'repeating animation timer', insert: 'every ${1:100} milliseconds call ${2:tick}\n\nfunc ${2:tick}():\n    $0' },
+            { label: 'canvasapp', detail: 'canvas drawing starter', insert: 'canvas "${1:cv}" width ${2:400} height ${3:300} color "white"\ndraw ${4|line,circle,rectangle,dot,text|} on "$1" $0' },
         ];
 
         let editor;
         let currentFilePath = null;
         let currentProjectPath = null;
         let hasUnsavedChanges = false;
+        let errorDecorations = [];
 
         require.config({ paths: { vs: 'node_modules/monaco-editor/min/vs' } });
 
@@ -524,18 +692,17 @@ show_window</pre>
 
             monaco.languages.setMonarchTokensProvider('epp', {
                 keywords: EPP_KEYWORDS,
-                operators: ['+', '-', '*', '/', '=', '<', '>', '!', '.'],
+                operators: ['+', '-', '*', '/', '%', '^', '=', '<', '>', '!', '.'],
                 symbols: /[=><!~?:&|+\-*\/\^%]+/,
                 tokenizer: {
                     root: [
+                        [/"([^"\\]|\\.)*$/, 'string.invalid'],
+                        [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
+                        [/#[^\n]*/, 'comment'],
                         [/[a-z_]\w*/, { cases: { '@keywords': 'keyword', '@default': 'identifier' } }],
                         [/[A-Z]\w*/, 'type.identifier'],
                         [/\d+(\.\d+)?/, 'number'],
-                        [/"([^"\\]|\\.)*$/, 'string.invalid'],
-                        [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
-                        [/#.*$/, 'comment'],
                         [/[{}()\[\]]/, '@brackets'],
-                        [/[<>](?!@symbols)/, '@brackets'],
                         [/@symbols/, { cases: { '@operators': 'operator', '@default': '' } }],
                         [/[;,.]/, 'delimiter']
                     ],
@@ -562,10 +729,63 @@ show_window</pre>
                 }
             });
 
+            // ── Autocomplete ────────────────────────────────
+            monaco.languages.registerCompletionItemProvider('epp', {
+                triggerCharacters: [' '],
+                provideCompletionItems: (model, position) => {
+                    const word = model.getWordUntilPosition(position);
+                    const range = {
+                        startLineNumber: position.lineNumber,
+                        endLineNumber: position.lineNumber,
+                        startColumn: word.startColumn,
+                        endColumn: word.endColumn
+                    };
+                    const K = monaco.languages.CompletionItemKind;
+                    const keywordSuggestions = EPP_KEYWORDS.map(k => ({
+                        label: k, kind: K.Keyword, insertText: k, range
+                    }));
+                    const functionSuggestions = EPP_FUNCTIONS.map(f => ({
+                        label: f.label,
+                        kind: K.Function,
+                        detail: f.detail,
+                        documentation: f.doc || '',
+                        insertText: f.insert || f.label + '($0)',
+                        insertTextRules: f.insert ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet : undefined,
+                        range
+                    }));
+                    const snippetSuggestions = EPP_SNIPPETS.map(s => ({
+                        label: s.label, kind: K.Snippet, detail: s.detail,
+                        insertText: s.insert,
+                        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                        range
+                    }));
+                    return { suggestions: [...snippetSuggestions, ...functionSuggestions, ...keywordSuggestions] };
+                }
+            });
+
+            // ── Hover docs ──────────────────────────────────
+            monaco.languages.registerHoverProvider('epp', {
+                provideHover: (model, position) => {
+                    const word = model.getWordAtPosition(position);
+                    if (!word) return null;
+                    const fn = EPP_FUNCTIONS.find(f => f.label === word.word);
+                    if (fn) {
+                        return {
+                            range: new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn),
+                            contents: [
+                                { value: '**' + fn.detail + '**' },
+                                ...(fn.doc ? [{ value: fn.doc }] : [])
+                            ]
+                        };
+                    }
+                    return null;
+                }
+            });
+
             editor = monaco.editor.create(document.getElementById('editor'), {
-                value: '# Welcome to E++ IDE\n# Click "New File" or "Open" to start\n# Press F5 to run\n\nsay "Hello, World!"\n',
+                value: '# Welcome to E++ IDE!\n# Press Ctrl+Space for autocomplete, F5 to run,\n# or click "Examples" for ready-made programs.\n\nsay "Hello, {\'World\'}!"\n',
                 language: 'epp',
-                theme: 'vs-dark',
+                theme: localStorage.getItem('epp-theme') === 'light' ? 'vs' : 'vs-dark',
                 fontSize: 14,
                 fontFamily: "'Monaco', 'Menlo', 'Consolas', monospace",
                 minimap: { enabled: true },
@@ -580,11 +800,15 @@ show_window</pre>
             editor.onDidChangeModelContent(() => {
                 hasUnsavedChanges = true;
                 updateTitle();
+                clearErrorHighlights();
             });
 
             editor.onDidChangeCursorPosition((e) => {
                 document.getElementById('cursor-pos').textContent = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
             });
+
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runFile);
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyN, newFile);
 
             initializeApp();
         });
@@ -605,9 +829,17 @@ show_window</pre>
             document.getElementById('guide-modal').addEventListener('click', (e) => {
                 if (e.target.id === 'guide-modal') hideGuide();
             });
+            document.getElementById('theme-btn').addEventListener('click', toggleTheme);
+
+            document.getElementById('examples-btn').addEventListener('click', showExamples);
+            document.getElementById('close-examples').addEventListener('click', hideExamples);
+            document.getElementById('examples-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'examples-modal') hideExamples();
+            });
+            renderExamples();
 
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') hideGuide();
+                if (e.key === 'Escape') { hideGuide(); hideExamples(); }
                 if (e.ctrlKey && e.key === 's') {
                     e.preventDefault();
                     saveFile();
@@ -629,10 +861,135 @@ show_window</pre>
                 showRunButton();
             });
 
+            initResizers();
+            applyThemeFromStorage();
+
+            try {
+                const aiStatus = await window.eppAPI.getAiStatus();
+                updateAiStatus(aiStatus);
+            } catch (e) { /* AI optional */ }
+
             const homePath = await window.eppAPI.getHomePath();
             currentProjectPath = homePath;
             loadFileTree(homePath);
         }
+
+        // ── Theme ─────────────────────────────────────────────
+        function toggleTheme() {
+            const next = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            localStorage.setItem('epp-theme', next);
+            applyTheme(next);
+        }
+
+        function applyThemeFromStorage() {
+            applyTheme(localStorage.getItem('epp-theme') || 'dark');
+        }
+
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                document.body.setAttribute('data-theme', 'light');
+                if (typeof monaco !== 'undefined') monaco.editor.setTheme('vs');
+                document.getElementById('theme-btn').innerHTML = '&#9790;';
+            } else {
+                document.body.removeAttribute('data-theme');
+                if (typeof monaco !== 'undefined') monaco.editor.setTheme('vs-dark');
+                document.getElementById('theme-btn').innerHTML = '&#9788;';
+            }
+        }
+
+        // ── Resizable panels ──────────────────────────────────
+        function makeDraggable(handle, onMove) {
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                handle.classList.add('dragging');
+                const move = (ev) => onMove(ev);
+                const up = () => {
+                    handle.classList.remove('dragging');
+                    document.removeEventListener('mousemove', move);
+                    document.removeEventListener('mouseup', up);
+                };
+                document.addEventListener('mousemove', move);
+                document.addEventListener('mouseup', up);
+            });
+        }
+
+        function initResizers() {
+            const sidebar = document.getElementById('sidebar');
+            makeDraggable(document.getElementById('sidebar-resizer'), (e) => {
+                const w = Math.min(450, Math.max(120, e.clientX));
+                sidebar.style.width = w + 'px';
+            });
+
+            const terminalPanel = document.getElementById('terminal-panel');
+            const mainRect = () => document.querySelector('.main-content').getBoundingClientRect();
+            makeDraggable(document.getElementById('terminal-resizer'), (e) => {
+                const bottom = mainRect().bottom;
+                const h = Math.min(bottom - 150, Math.max(50, bottom - e.clientY - 24));
+                terminalPanel.style.height = h + 'px';
+            });
+
+            const aiSidebar = document.getElementById('ai-sidebar');
+            makeDraggable(document.getElementById('ai-resizer'), (e) => {
+                const right = mainRect().right;
+                const w = Math.min(480, Math.max(220, right - e.clientX));
+                aiSidebar.style.width = w + 'px';
+            });
+        }
+
+        // ── Error highlight from interpreter output ───────────
+        function highlightErrorsFromOutput() {
+            const term = document.getElementById('terminal-output');
+            const match = term.textContent.match(/Error at line (\d+)/);
+            if (!match || !editor) return;
+            const lineNum = parseInt(match[1], 10);
+            errorDecorations = editor.deltaDecorations(errorDecorations, [{
+                range: new monaco.Range(lineNum, 1, lineNum, 1),
+                options: {
+                    isWholeLine: true,
+                    className: 'err-line',
+                    linesDecorationsClassName: 'err-gutter'
+                }
+            }]);
+            editor.revealLineInCenter(lineNum);
+            editor.setPosition({ lineNumber: lineNum, column: 1 });
+        }
+
+        function clearErrorHighlights() {
+            if (!editor) return;
+            errorDecorations = editor.deltaDecorations(errorDecorations, []);
+        }
+
+        // ── Examples gallery ──────────────────────────────────
+        function renderExamples() {
+            const grid = document.getElementById('examples-grid');
+            grid.innerHTML = '';
+            EXAMPLES.forEach((ex) => {
+                const card = document.createElement('div');
+                card.className = 'example-card';
+                card.innerHTML =
+                    '<div class="ex-icon">' + ex.icon + '</div>' +
+                    '<div class="ex-name">' + escapeHtml(ex.name) + '</div>' +
+                    '<div class="ex-desc">' + escapeHtml(ex.desc) + '</div>';
+                card.addEventListener('click', () => {
+                    loadExample(ex);
+                    hideExamples();
+                });
+                grid.appendChild(card);
+            });
+        }
+
+        async function loadExample(ex) {
+            if (hasUnsavedChanges && !confirm('Replace current buffer with "' + ex.name + '"? Unsaved changes will be lost.')) {
+                return;
+            }
+            editor.setValue(ex.code);
+            hasUnsavedChanges = false;
+            updateTitle();
+            setStatus('Loaded example: ' + ex.name);
+        }
+
+        function showExamples() { document.getElementById('examples-modal').classList.remove('hidden'); }
+        function hideExamples() { document.getElementById('examples-modal').classList.add('hidden'); }
 
         function showGuide() { document.getElementById('guide-modal').classList.remove('hidden'); }
         function hideGuide() { document.getElementById('guide-modal').classList.add('hidden'); }
@@ -661,7 +1018,7 @@ show_window</pre>
             if (currentProjectPath !== '/') {
                 const parentItem = document.createElement('div');
                 parentItem.className = 'file-item directory';
-                parentItem.innerHTML = '<span class="icon">📁</span>..';
+                parentItem.innerHTML = '<span class="icon">&#128193;</span>..';
                 parentItem.addEventListener('click', async () => {
                     const parent = await window.eppAPI.pathDirname(currentProjectPath);
                     loadFileTree(parent);
@@ -675,8 +1032,8 @@ show_window</pre>
                 item.dataset.path = file.path;
                 item.dataset.isDirectory = file.isDirectory;
 
-                const icon = file.isDirectory ? '📁' : (file.name.endsWith('.epp') ? '📄' : '📝');
-                item.innerHTML = '<span class="icon">' + icon + '</span>' + file.name;
+                const icon = file.isDirectory ? '&#128193;' : (file.name.endsWith('.epp') ? '&#128196;' : '&#128209;');
+                item.innerHTML = '<span class="icon">' + icon + '</span>' + escapeHtml(file.name);
 
                 item.addEventListener('click', () => {
                     if (file.isDirectory) {
@@ -704,7 +1061,7 @@ show_window</pre>
 
             if (result.canceled || !result.filePath) return;
 
-            const filePath = result.filePath;
+            const filePath = result.filePath.endsWith('.epp') ? filePathSafe(result.filePath) : result.filePath + '.epp';
             const content = editor.getValue();
             const writeResult = await window.eppAPI.writeFile(filePath, content);
 
@@ -717,6 +1074,10 @@ show_window</pre>
             } else {
                 setStatus('Error: ' + writeResult.error);
             }
+        }
+
+        function filePathSafe(p) {
+            return p;
         }
 
         async function openFile() {
@@ -855,6 +1216,7 @@ show_window</pre>
             document.getElementById('run-btn').classList.remove('hidden');
             document.getElementById('stop-btn').classList.add('hidden');
             setStatus('Ready');
+            highlightErrorsFromOutput();
         }
 
         function appendTerminal(text) {
@@ -865,6 +1227,7 @@ show_window</pre>
 
         function clearTerminal() {
             document.getElementById('terminal-output').textContent = '';
+            clearErrorHighlights();
         }
 
         async function updateTitle() {
@@ -972,51 +1335,81 @@ show_window</pre>
             }
         }
 
-        // --- AI Chat Logic ---
+        // ── AI Chat Logic ─────────────────────────────────────
         const aiMessagesDiv = document.getElementById('ai-messages');
         const aiInput = document.getElementById('ai-input');
         const aiSubmit = document.getElementById('ai-submit');
         let chatHistory = [];
+        let aiConfigured = true;
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function renderMarkdown(text) {
+            const escaped = escapeHtml(text);
+            return escaped
+                .replace(/```[a-zA-Z]*\n?([\s\S]*?)```/g,
+                    '<div style="position:relative"><pre><code>$1</code></pre>' +
+                    '<button class="ai-apply-btn" onclick="applyCode(this)">Apply</button></div>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function updateAiStatus(status) {
+            const dot = document.getElementById('ai-dot');
+            const label = document.getElementById('ai-model-label');
+            aiConfigured = Boolean(status && status.configured);
+            if (aiConfigured) {
+                dot.classList.add('ok');
+                dot.classList.remove('off');
+                label.textContent = status.model || '';
+            } else {
+                dot.classList.add('off');
+                dot.classList.remove('ok');
+                label.textContent = 'no API key — see README';
+            }
+        }
 
         function appendMessage(role, text) {
             const msgDiv = document.createElement('div');
             msgDiv.className = 'ai-message ' + role;
-            
+
             if (role === 'assistant') {
-                // Simple markdown parsing for code blocks with Apply button
-                const formattedText = text.replace(/```[a-zA-Z]*\n?([\s\S]*?)```/g, '<div style="position:relative"><pre><code>$1</code></pre><button class="ai-apply-btn" onclick="applyCode(this)">Apply</button></div>')
-                                        .replace(/`([^`]+)`/g, '<code>$1</code>')
-                                        .replace(/\n/g, '<br>');
-                msgDiv.innerHTML = '<strong>AI:</strong><br>' + formattedText;
+                msgDiv.innerHTML = '<strong>AI:</strong><br>' + renderMarkdown(text);
             } else {
-                msgDiv.innerHTML = '<strong>You:</strong><br>' + text.replace(/\n/g, '<br>');
+                msgDiv.innerHTML = '<strong>You:</strong><br>' + escapeHtml(text).replace(/\n/g, '<br>');
             }
-            
+
             aiMessagesDiv.appendChild(msgDiv);
             aiMessagesDiv.scrollTop = aiMessagesDiv.scrollHeight;
+            return msgDiv;
         }
 
         window.applyCode = function(btn) {
             const codeBlock = btn.parentElement.querySelector('code');
             if (codeBlock && editor) {
-                // Replace encoded HTML entities
                 const code = codeBlock.innerHTML
                     .replace(/&lt;/g, '<')
                     .replace(/&gt;/g, '>')
-                    .replace(/&amp;/g, '&')
-                    .replace(/<br>/gi, '\n');
-                
+                    .replace(/&quot;/g, '"')
+                    .replace(/&amp;/g, '&');
+
                 editor.executeEdits("ai-agent", [{
                     range: editor.getModel().getFullModelRange(),
                     text: code,
                     forceMoveMarkers: true
                 }]);
-                
-                btn.innerHTML = "Applied ✓";
+
+                btn.innerHTML = "Applied &#10003;";
                 btn.style.backgroundColor = "#2d8a4e";
                 setTimeout(() => {
                     btn.innerHTML = "Apply";
-                    btn.style.backgroundColor = "#007acc";
+                    btn.style.backgroundColor = "";
                 }, 2000);
             }
         };
@@ -1031,11 +1424,11 @@ show_window</pre>
                 aiMessagesDiv.appendChild(currentAssistantMsgDiv);
             }
             currentFullText += chunk;
-            
-            // Auto-type code into the editor if we are inside a code block
-            const blocks = currentFullText.split(/```[a-zA-Z]*\n?/);
-            if (blocks.length % 2 === 0) {
-                const currentCode = blocks[blocks.length - 1];
+
+            // Auto-type code into the editor while inside an open code fence
+            const parts = currentFullText.split(/```[a-zA-Z]*\n?/);
+            if (parts.length % 2 === 0 && parts.length > 1) {
+                const currentCode = parts[parts.length - 1];
                 if (editor) {
                     const scrollPos = editor.getScrollTop();
                     editor.executeEdits("ai-agent", [{
@@ -1046,17 +1439,37 @@ show_window</pre>
                     editor.setScrollTop(scrollPos);
                 }
             }
-            
-            const formattedText = currentFullText.replace(/```[a-zA-Z]*\n?([\s\S]*?)```/g, '<div style="position:relative"><pre><code>$1</code></pre><button class="ai-apply-btn" onclick="applyCode(this)">Apply</button></div>')
-                                    .replace(/`([^`]+)`/g, '<code>$1</code>')
-                                    .replace(/\n/g, '<br>');
-            currentAssistantMsgDiv.innerHTML = '<strong>AI:</strong><br>' + formattedText;
+
+            currentAssistantMsgDiv.innerHTML = '<strong>AI:</strong><br>' + renderMarkdown(currentFullText);
             aiMessagesDiv.scrollTop = aiMessagesDiv.scrollHeight;
         });
+
+        function finishAiStream(reply) {
+            // Final flush so the editor matches the completed reply exactly.
+            const parts = reply.split(/```[a-zA-Z]*\n?/);
+            if (parts.length % 2 === 0 && parts.length > 1 && editor) {
+                const finalCode = parts[parts.length - 1].replace(/\n?```$/, '');
+                const scrollPos = editor.getScrollTop();
+                editor.executeEdits("ai-agent", [{
+                    range: editor.getModel().getFullModelRange(),
+                    text: finalCode,
+                    forceMoveMarkers: true
+                }]);
+                editor.setScrollTop(scrollPos);
+            }
+        }
 
         async function sendAiMessage() {
             const text = aiInput.value.trim();
             if (!text) return;
+
+            if (!aiConfigured) {
+                appendMessage('assistant',
+                    'I need an API key before I can think! Set the **EPP_AI_API_KEY** environment variable ' +
+                    '(any OpenAI-compatible provider works), or create `epp-ide/config.json`:\n' +
+                    '```\n{ "apiKey": "...", "baseUrl": "...", "model": "..." }\n```');
+                return;
+            }
 
             aiInput.value = '';
             aiInput.disabled = true;
@@ -1072,6 +1485,7 @@ show_window</pre>
             try {
                 const response = await window.eppAPI.chatWithAI(chatHistory);
                 if (response.success) {
+                    finishAiStream(response.reply);
                     chatHistory.push({ role: 'assistant', content: response.reply });
                 } else {
                     appendMessage('assistant', 'Error connecting to AI: ' + response.error);

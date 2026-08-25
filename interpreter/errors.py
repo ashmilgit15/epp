@@ -26,3 +26,9 @@ class ReturnException(Exception):
     def __init__(self, value):
         self.value = value
         super().__init__(str(value))
+
+class BreakException(Exception):
+    pass
+
+class ContinueException(Exception):
+    pass

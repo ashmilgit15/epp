@@ -4,8 +4,9 @@ from interpreter.errors import LexerError
 KEYWORDS = {
     'func', 'class', 'if', 'elif', 'else', 'for', 'while', 'return', 'say',
     'in', 'and', 'or', 'not', 'null', 'true', 'false', 'self', 'import',
-    'try', 'catch',
-    # GUI keywords
+    'try', 'catch', 'repeat', 'times', 'switch', 'case', 'default',
+    'break', 'continue',
+    # GUI keywords (soft — usable as identifiers in normal code)
     'window', 'label', 'button', 'input', 'image', 'textbox',
     'checkbox', 'dropdown', 'options',
     'at', 'width', 'height', 'color', 'font_size', 'id',
@@ -13,6 +14,23 @@ KEYWORDS = {
     'set_text', 'to', 'get_text', 'show_window',
     'alert', 'set_color', 'set_visible', 'resizable',
     'text',
+    # Creative / canvas keywords
+    'canvas', 'draw', 'on', 'with', 'clear_canvas', 'slider',
+    'progress', 'set_progress', 'every', 'after', 'call',
+    'milliseconds', 'ms', 'second', 'seconds', 'beep', 'fill',
+    'from', 'size',
+}
+
+# Words that are GUI syntax but may also be used as ordinary identifiers.
+# The parser treats these as identifiers whenever they appear where a value
+# is expected, so `text = "hi"` works while `label text "hi" at 0 0` still does.
+SOFT_KEYWORD_TYPES = {
+    'AT', 'WIDTH', 'HEIGHT', 'COLOR', 'FONT_SIZE', 'ID', 'OPTIONS',
+    'PLACEHOLDER', 'PASSWORD', 'TEXT', 'RESIZABLE', 'TO', 'ON_CLICK',
+    'ON_CHANGE',
+    'CANVAS', 'DRAW', 'ON', 'WITH', 'CLEAR_CANVAS', 'SLIDER',
+    'PROGRESS', 'SET_PROGRESS', 'EVERY', 'AFTER', 'CALL', 'MILLIS',
+    'SECONDS', 'BEEP', 'FILL', 'FROM', 'SIZE',
 }
 
 COMPARISON_OPS = {
@@ -30,27 +48,6 @@ COMPARISON_OPS = {
     '<': 'IS_LESS_THAN',
     '==': 'IS_EQUAL_TO',
     '!=': 'IS_NOT',
-}
-
-TOKEN_TYPES = {
-    'PLUS': '+',
-    'MINUS': '-',
-    'MULT': '*',
-    'DIV': '/',
-    'ASSIGN': '=',
-    'LPAREN': '(',
-    'RPAREN': ')',
-    'LBRACKET': '[',
-    'RBRACKET': ']',
-    'LBRACE': '{',
-    'RBRACE': '}',
-    'DOT': '.',
-    'COMMA': ',',
-    'COLON': ':',
-    'NEWLINE': 'NEWLINE',
-    'INDENT': 'INDENT',
-    'DEDENT': 'DEDENT',
-    'EOF': 'EOF',
 }
 
 
@@ -75,6 +72,7 @@ class Lexer:
         self.column = 1
         self.tokens = []
         self.indents = [0]
+        self.bracket_depth = 0
 
     def peek(self, offset=0):
         idx = self.pos + offset
@@ -103,16 +101,33 @@ class Lexer:
     def read_string(self):
         quote = self.peek()
         self.advance()
-        start = self.pos
-        while self.pos < len(self.source) and self.source[self.pos] != quote:
-            if self.source[self.pos] == '\\' and self.pos + 1 < len(self.source):
+        parts = []
+        buf = []
+        while self.pos < len(self.source):
+            ch = self.peek()
+            if ch == '\\' and self.pos + 1 < len(self.source):
+                nxt = self.peek(1)
+                if nxt == 'n':
+                    buf.append('\n')
+                elif nxt == 't':
+                    buf.append('\t')
+                elif nxt == '\\':
+                    buf.append('\\')
+                elif nxt == quote:
+                    buf.append(quote)
+                else:
+                    buf.append(nxt)
                 self.advance()
+                self.advance()
+                continue
+            if ch == quote:
+                break
+            buf.append(ch)
             self.advance()
         if self.pos >= len(self.source):
             raise LexerError(f"Unterminated string", line=self.line, column=self.column)
-        value = self.source[start:self.pos]
         self.advance()
-        return value
+        return ''.join(buf)
 
     def read_number(self):
         start = self.pos
@@ -153,27 +168,46 @@ class Lexer:
             elif self.peek() == '\t':
                 spaces += 4
             self.advance()
-            # If we've reached the end while counting spaces, break
-            if self.peek() == '':
-                break
-        if self.peek() == '\n' or self.peek() == '#' or self.peek() == '':
+        if self.peek() in ('\n', '#', ''):
             return
         current_indent = spaces // 4
         if spaces % 4 != 0:
             raise LexerError(f"Invalid indentation: use 4 spaces", line=self.line, column=self.column)
         if current_indent > self.indents[-1]:
-            self.tokens.append(Token('INDENT', line=self.line, column=self.column))
+            # Emit one INDENT per level so nested blocks parse correctly
+            for _ in range(current_indent - self.indents[-1]):
+                self.tokens.append(Token('INDENT', line=self.line, column=self.column))
             self.indents.append(current_indent)
         elif current_indent < self.indents[-1]:
             while self.indents[-1] > current_indent:
                 self.tokens.append(Token('DEDENT', line=self.line, column=self.column))
                 self.indents.pop()
+            if self.indents[-1] != current_indent:
+                raise LexerError(
+                    f"Inconsistent indentation",
+                    line=self.line, column=self.column,
+                    suggestion="This line doesn't line up with any enclosing block"
+                )
 
     def tokenize(self):
         COMPARISON_KEYWORDS = sorted(COMPARISON_OPS.keys(), key=len, reverse=True)
 
+        single_tokens = {
+            '+': 'PLUS', '-': 'MINUS', '*': 'MULT', '/': 'DIV', '%': 'MOD',
+            '^': 'POW',
+            '=': 'ASSIGN', '(': 'LPAREN', ')': 'RPAREN',
+            '[': 'LBRACKET', ']': 'RBRACKET', '{': 'LBRACE',
+            '}': 'RBRACE', '.': 'DOT', ',': 'COMMA', ':': 'COLON'
+        }
+        compound_tokens = {
+            '+=': 'PLUS_ASSIGN', '-=': 'MINUS_ASSIGN',
+            '*=': 'MULT_ASSIGN', '/=': 'DIV_ASSIGN', '%=': 'MOD_ASSIGN',
+        }
+
+        at_line_start = True
         while self.pos < len(self.source):
-            self.skip_whitespace()
+            if not at_line_start:
+                self.skip_whitespace()
             if self.pos >= len(self.source):
                 break
 
@@ -181,18 +215,23 @@ class Lexer:
 
             if ch == '\n':
                 self.advance()
+                if self.bracket_depth > 0:
+                    # Inside (...) / [...] / {...}: ignore newlines entirely
+                    continue
                 if self.tokens and self.tokens[-1].type not in ('NEWLINE', 'INDENT', 'DEDENT', 'COLON'):
                     self.tokens.append(Token('NEWLINE', line=self.line, column=self.column))
                 self.handle_indentation()
+                at_line_start = True
                 continue
+
+            at_line_start = False
 
             if ch == '#' or (ch == '/' and self.peek(1) == '/'):
                 self.skip_comment()
                 continue
 
-            if self.peek() in ' \t':
+            if self.peek() in ' \t\r':
                 self.skip_whitespace()
-                self.handle_indentation()
                 continue
 
             if ch.isdigit():
@@ -226,15 +265,20 @@ class Lexer:
                 self.tokens.append(Token(token_type, word, self.line, self.column))
                 continue
 
-            single_tokens = {
-                '+': 'PLUS', '-': 'MINUS', '*': 'MULT', '/': 'DIV',
-                '=': 'ASSIGN', '(': 'LPAREN', ')': 'RPAREN',
-                '[': 'LBRACKET', ']': 'RBRACKET', '{': 'LBRACE',
-                '}': 'RBRACE', '.': 'DOT', ',': 'COMMA', ':': 'COLON'
-            }
+            two_char = self.source[self.pos:self.pos + 2]
+            if two_char in compound_tokens:
+                self.tokens.append(Token(compound_tokens[two_char], two_char, self.line, self.column))
+                self.advance()
+                self.advance()
+                continue
 
             if ch in single_tokens:
-                self.tokens.append(Token(single_tokens[ch], ch, self.line, self.column))
+                ttype = single_tokens[ch]
+                if ttype in ('LPAREN', 'LBRACKET', 'LBRACE'):
+                    self.bracket_depth += 1
+                elif ttype in ('RPAREN', 'RBRACKET', 'RBRACE'):
+                    self.bracket_depth = max(0, self.bracket_depth - 1)
+                self.tokens.append(Token(ttype, ch, self.line, self.column))
                 self.advance()
                 continue
 

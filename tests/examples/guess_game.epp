@@ -1,0 +1,18 @@
+# Guess the Number — classic game
+seed(7)    # deterministic for demos; remove this line for real randomness!
+secret = random_int(1, 100)
+guesses = 0
+
+say "I picked a number between 1 and 100. Can you guess it?"
+
+while true:
+    guess = int(input("Your guess: "))
+    guesses += 1
+    if guess is less than secret:
+        say "Too low!"
+    elif guess is greater than secret:
+        say "Too high!"
+    else:
+        break
+
+say "You got it in {guesses} guesses!"

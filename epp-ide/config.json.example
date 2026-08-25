@@ -1,0 +1,6 @@
+{
+  "_comment": "Copy this file to config.json (it is gitignored) and fill in your key. Any OpenAI-compatible provider works. You can also use environment variables instead: EPP_AI_API_KEY, EPP_AI_BASE_URL, EPP_AI_MODEL",
+  "baseUrl": "https://integrate.api.nvidia.com/v1",
+  "apiKey": "YOUR_API_KEY_HERE",
+  "model": "meta/llama-3.1-405b-instruct"
+}

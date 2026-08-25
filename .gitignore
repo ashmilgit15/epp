@@ -13,6 +13,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Secrets — never commit API keys!
+epp-ide/config.json
+.env
+
 # OS / Misc
 .DS_Store
 *.tar.gz
