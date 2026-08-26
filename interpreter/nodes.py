@@ -130,6 +130,19 @@ class BreakStmt(Node):
 class ContinueStmt(Node):
     pass
 
+class TestStmt(Node):
+    """test "name": ...body... — groups expectations into a named test"""
+    def __init__(self, name, body):
+        self.name = name
+        self.body = body
+
+class ExpectStmt(Node):
+    """expect <expr> to_be <expr> | to_be_true | to_be_false | to_throw"""
+    def __init__(self, expr, matcher, expected=None):
+        self.expr = expr
+        self.matcher = matcher    # 'to_be' | 'to_be_true' | 'to_be_false' | 'to_throw'
+        self.expected = expected
+
 class BreakException(Exception):
     pass
 
@@ -201,7 +214,7 @@ class LabelStmt(Node):
 class ButtonStmt(Node):
     """button "text" at X Y [width W] [height H] [on_click func_name] [color "c"] [id "name"]"""
     def __init__(self, text, x, y, width=None, height=None,
-                 on_click=None, color=None, widget_id=None):
+                 on_click=None, color=None, widget_id=None, on_key=None):
         self.text      = text
         self.x         = x
         self.y         = y
@@ -210,16 +223,19 @@ class ButtonStmt(Node):
         self.on_click  = on_click
         self.color     = color
         self.widget_id = widget_id
+        self.on_key    = on_key
 
 class InputStmt(Node):
     """input "id" at X Y [width W] [placeholder "text"] [password]"""
-    def __init__(self, widget_id, x, y, width=None, placeholder=None, password=False):
+    def __init__(self, widget_id, x, y, width=None, placeholder=None,
+                 password=False, on_key=None):
         self.widget_id   = widget_id
         self.x           = x
         self.y           = y
         self.width       = width
         self.placeholder = placeholder
         self.password    = password
+        self.on_key      = on_key
 
 class ImageStmt(Node):
     """image "path" at X Y [width W] [height H]"""
@@ -232,12 +248,13 @@ class ImageStmt(Node):
 
 class TextboxStmt(Node):
     """textbox "id" at X Y width W height H"""
-    def __init__(self, widget_id, x, y, width, height):
+    def __init__(self, widget_id, x, y, width, height, on_key=None):
         self.widget_id = widget_id
         self.x         = x
         self.y         = y
         self.width     = width
         self.height    = height
+        self.on_key    = on_key
 
 class CheckboxStmt(Node):
     """checkbox "id" text "label" at X Y [on_change func]"""

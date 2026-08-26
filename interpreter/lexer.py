@@ -6,6 +6,7 @@ KEYWORDS = {
     'in', 'and', 'or', 'not', 'null', 'true', 'false', 'self', 'import',
     'try', 'catch', 'repeat', 'times', 'switch', 'case', 'default',
     'break', 'continue',
+    'test', 'expect', 'to_be', 'to_be_true', 'to_be_false', 'to_throw',
     # GUI keywords (soft — usable as identifiers in normal code)
     'window', 'label', 'button', 'input', 'image', 'textbox',
     'checkbox', 'dropdown', 'options',

@@ -1,4 +1,4 @@
-# e++ Language Specification (v2.1)
+# e++ Language Specification (v2.3)
 
 ## Overview
 
@@ -368,10 +368,10 @@ Widget reference:
 |-----------|-----------|
 | `window` | `"Title"` `width` `height` `[color]` `[resizable]` `[id]` `[on_key fn]` |
 | `label` | `"text"` `at X Y` `[font_size N]` `[color]` `[id]` |
-| `button` | `"text"` `at X Y` `[width]` `[height]` `[on_click fn]` `[color]` `[id]` |
-| `input` | `"id"` `at X Y` `[width]` `[placeholder "..."]` `[password]` |
+| `button` | `"text"` `at X Y` `[width]` `[height]` `[on_click fn]` `[color]` `[id]` `[on_key fn]` |
+| `input` | `"id"` `at X Y` `[width]` `[placeholder "..."]` `[password]` `[on_key fn]` |
 | `image` | `"path"` `at X Y` `[width]` `[height]` |
-| `textbox` | `"id"` `at X Y` `[width]` `[height]` |
+| `textbox` | `"id"` `at X Y` `[width]` `[height]` `[on_key fn]` |
 | `checkbox` | `"id"` `[text "..."]` `at X Y` `[on_change fn]` |
 | `dropdown` | `"id"` `options [...]` `at X Y` `[on_change fn]` |
 | `slider` | `"id"` `[from A]` `[to B]` `at X Y` `[on_change fn]` |
@@ -418,12 +418,50 @@ Error: Circular import detected: 'a.epp' imports itself
 ```
 The IDE highlights the line automatically after a failed run — and shows live squiggles as you type (see below).
 
+## Built-in Testing
+
+Write tests right in your programs with `test` blocks and `expect`:
+```epp
+func add(a, b):
+    return a + b
+
+test "addition works":
+    expect add(2, 2) to_be 4
+    expect add(-1, 1) to_be 0
+
+test "membership":
+    expect "ell" in "Hello" to_be_true
+
+test "floats are forgiving":
+    expect 0.1 + 0.2 to_be 0.3      # tiny float tolerance built in
+
+test "errors can be verified":
+    expect 1 / 0 to_throw
+```
+
+Matchers:
+| Matcher | Passes when... |
+|---------|----------------|
+| `expect X to_be Y` | X equals Y (numbers compare with tiny tolerance) |
+| `expect X to_be_true` | X is truthy |
+| `expect X to_be_false` | X is falsy |
+| `expect X() to_throw` | evaluating X raises an error |
+
+Results print as they run with a final summary, and the interpreter exits with code 1 if anything failed — perfect for CI:
+```
+▶ test: addition works
+  (2 checks ran)
+
+✔ TESTS: all 3 passed
+```
+
 ## Command-line Tools
 
 ```bash
 python3 -m interpreter.epp program.epp        # run
 python3 -m interpreter.epp                    # REPL
 python3 -m interpreter.epp -e 'say 2 ^ 8'     # one-liner
+python3 -m interpreter.epp --test file.epp    # run tests, exit 1 on failure
 python3 -m interpreter.epp --check file.epp   # parse-only check (exit code 1 on error)
 python3 -m interpreter.epp --check file.epp --json   # machine-readable output for tools
 python3 -m interpreter.epp --tokens file.epp  # dump the token stream (debugging)

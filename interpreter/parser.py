@@ -106,6 +106,10 @@ class Parser:
         elif token.type == 'CONTINUE':
             self.advance()
             return ContinueStmt()
+        elif token.type == 'TEST':
+            return self.parse_test()
+        elif token.type == 'EXPECT':
+            return self.parse_expect()
         elif token.type == 'TRY':
             return self.parse_try_catch()
         elif token.type == 'RETURN':
@@ -266,7 +270,7 @@ class Parser:
         self.expect('AT', suggestion="'at X Y' after button text")
         x = self.parse_expression()
         y = self.parse_expression()
-        width = None; height = None; on_click = None; color = None; widget_id = None
+        width = None; height = None; on_click = None; color = None; widget_id = None; on_key = None
         while not self._at_end_of_line():
             t = self.peek().type
             if t == 'WIDTH':
@@ -280,9 +284,11 @@ class Parser:
                 self.advance(); color = self.parse_expression()
             elif t == 'ID':
                 self.advance(); widget_id = self.parse_expression()
+            elif t == 'ON_KEY':
+                self.advance(); on_key = self.parse_name("function name after on_key")
             else:
                 break
-        return ButtonStmt(text, x, y, width, height, on_click, color, widget_id)
+        return ButtonStmt(text, x, y, width, height, on_click, color, widget_id, on_key)
 
     def parse_input_widget(self):
         self.advance()  # consume INPUT
@@ -292,7 +298,7 @@ class Parser:
         self.expect('AT', suggestion="'at X Y' after input id")
         x = self.parse_expression()
         y = self.parse_expression()
-        width = None; placeholder = None; password = False
+        width = None; placeholder = None; password = False; on_key = None
         while not self._at_end_of_line():
             t = self.peek().type
             if t == 'WIDTH':
@@ -301,9 +307,11 @@ class Parser:
                 self.advance(); placeholder = self.parse_expression()
             elif t == 'PASSWORD':
                 self.advance(); password = True
+            elif t == 'ON_KEY':
+                self.advance(); on_key = self.parse_name("function name after on_key")
             else:
                 break
-        return InputStmt(widget_id, x, y, width, placeholder, password)
+        return InputStmt(widget_id, x, y, width, placeholder, password, on_key)
 
     def parse_image(self):
         self.advance()
@@ -330,16 +338,18 @@ class Parser:
         self.expect('AT', suggestion="'at X Y' after textbox id")
         x = self.parse_expression()
         y = self.parse_expression()
-        width = 200; height = 100
+        width = 200; height = 100; on_key = None
         while not self._at_end_of_line():
             t = self.peek().type
             if t == 'WIDTH':
                 self.advance(); width = self.parse_expression()
             elif t == 'HEIGHT':
                 self.advance(); height = self.parse_expression()
+            elif t == 'ON_KEY':
+                self.advance(); on_key = self.parse_name("function name after on_key")
             else:
                 break
-        return TextboxStmt(widget_id, x, y, width, height)
+        return TextboxStmt(widget_id, x, y, width, height, on_key)
 
     def parse_checkbox(self):
         self.advance()
@@ -647,7 +657,7 @@ class Parser:
 
     def parse_repeat(self):
         self.advance()
-        count = self.parse_expression()
+        count = self.eval_number_token()
         times_tok = self.peek()
         if times_tok is None or times_tok.type != 'TIMES':
             raise ParserError(
@@ -660,6 +670,32 @@ class Parser:
         self.expect('COLON', suggestion="colon ':' after 'repeat N times'")
         body = self.parse_block()
         return RepeatStmt(count, body)
+
+    MATCHER_TYPES = {'TO_BE', 'TO_BE_TRUE', 'TO_BE_FALSE', 'TO_THROW'}
+
+    def parse_test(self):
+        self.advance()  # TEST
+        name_tok = self.expect('STRING', suggestion='a name in quotes, e.g. test "math works":')
+        self.expect('COLON', suggestion="colon ':' after the test name")
+        body = self.parse_block()
+        return TestStmt(name_tok.value, body)
+
+    def parse_expect(self):
+        self.advance()  # EXPECT
+        expr = self.parse_expression()
+        tok = self.peek()
+        if tok is None or tok.type not in self.MATCHER_TYPES:
+            raise ParserError(
+                "I expected a matcher after 'expect'",
+                line=tok.line if tok else None,
+                column=tok.column if tok else None,
+                suggestion="use to_be, to_be_true, to_be_false or to_throw"
+            )
+        self.advance()
+        expected = None
+        if tok.type == 'TO_BE':
+            expected = self.parse_expression()
+        return ExpectStmt(expr, tok.type, expected)
 
     def parse_switch(self):
         self.advance()

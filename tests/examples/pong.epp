@@ -1,0 +1,106 @@
+# Pong — two players, one keyboard!
+# Player 1: W / S    Player 2: Arrow Up / Down
+# First to 5 wins. Press space to serve.
+
+window "Pong" width 560 height 420 color "black" on_key handle_key
+canvas "cv" width 540 height 360 color "#001015"
+
+label "P1: W/S     P2: Arrows     Space = serve" at 60 370 font_size 12 color "#557788"
+label "" at 230 392 font_size 18 color "white" id "score_lbl"
+
+ball_x = 270
+ball_y = 180
+vx = 0
+vy = 0
+p1_y = 150
+p2_y = 150
+score1 = 0
+score2 = 0
+PAD_H = 70
+
+func serve(direction):
+    vx = direction * 5
+    vy = random_int(-3, 3)
+    if vy == 0:
+        vy = 2
+
+func handle_key(key):
+    if key == "w" or key == "W":
+        p1_y -= 25
+    elif key == "s" or key == "S":
+        p1_y += 25
+    elif key == "Up":
+        p2_y -= 25
+    elif key == "Down":
+        p2_y += 25
+    elif key == "space":
+        if vx == 0:
+            if score1 + score2 == 0:
+                serve(1)
+            else:
+                serve(-1)
+    # keep paddles on screen
+    if p1_y < 0:
+        p1_y = 0
+    if p1_y > 290:
+        p1_y = 290
+    if p2_y < 0:
+        p2_y = 0
+    if p2_y > 290:
+        p2_y = 290
+
+func draw_paddle(px, py):
+    draw rectangle on "cv" from px py to px + 10 py + PAD_H color "white" fill "white"
+
+func tick():
+    ball_x += vx
+    ball_y += vy
+
+    # bounce off top/bottom
+    if ball_y < 5 or ball_y > 355:
+        vy = -vy
+
+    # paddle collisions
+    if ball_x < 25 and vx < 0:
+        if ball_y > p1_y - 5 and ball_y < p1_y + PAD_H + 5:
+            vx = -vx
+            beep 660 20
+    if ball_x > 515 and vx > 0:
+        if ball_y > p2_y - 5 and ball_y < p2_y + PAD_H + 5:
+            vx = -vx
+            beep 660 20
+
+    # scoring
+    if ball_x < 0:
+        score2 += 1
+        ball_x = 270
+        ball_y = 180
+        vx = 0
+    if ball_x > 540:
+        score1 += 1
+        ball_x = 270
+        ball_y = 180
+        vx = 0
+
+    set_text "score_lbl" to "{score1}   -   {score2}"
+
+    if score1 >= 5 or score2 >= 5:
+        clear_canvas "cv"
+        winner = "Player 1 wins!"
+        if score2 > score1:
+            winner = "Player 2 wins!"
+        draw text on "cv" at 200 170 text winner color "yellow"
+        draw text on "cv" at 195 210 text "press space to reset" color "gray"
+        if vx == 0 and score1 + score2 >= 10:
+            score1 = 0
+            score2 = 0
+        return
+
+    clear_canvas "cv"
+    draw line on "cv" from 270 0 to 270 360 color "#123333" width 2
+    draw_paddle(12, p1_y)
+    draw_paddle(518, p2_y)
+    draw circle on "cv" at ball_x ball_y size 6 color "yellow" fill "yellow"
+
+every 33 milliseconds call tick
+show_window

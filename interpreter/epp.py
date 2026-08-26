@@ -145,10 +145,12 @@ def token_type():
     return Token
 
 
-def run_file(filepath):
+def run_file(filepath, test_mode=False):
     with open(filepath, 'r') as f:
         source = f.read()
     evaluator = create_evaluator(script_dir=os.path.dirname(os.path.abspath(filepath)))
+    if test_mode:
+        print(f"Running tests in {filepath}...\n")
     try:
         run_source(source, evaluator)
     except EppError as e:
@@ -156,6 +158,13 @@ def run_file(filepath):
     except KeyboardInterrupt:
         print("\n(interrupted)", file=sys.stderr)
         sys.exit(130)
+    if test_mode and (evaluator.test_stats is None
+                      or evaluator.test_stats['passed'] + evaluator.test_stats['failed'] == 0):
+        print("No tests found — add a test block:\n\n"
+              '  test "my feature":\n'
+              "      expect 1 + 1 to_be 2")
+    if evaluator.test_stats and evaluator.test_stats['failed']:
+        sys.exit(1)
 
 
 def repl():
@@ -228,6 +237,16 @@ def main():
         print(f"E++ v{__version__}")
         return
 
+    if args[0] == '--test':
+        if len(args) < 2:
+            print("Usage: epp --test <file.epp>", file=sys.stderr)
+            sys.exit(2)
+        filepath = args[1]
+        if not os.path.exists(filepath):
+            _fail(f"Error: File '{filepath}' not found")
+        run_file(filepath, test_mode=True)
+        return
+
     if args[0] == '--check':
         if len(args) < 2:
             print("Usage: epp --check <file.epp> [--json]", file=sys.stderr)
@@ -260,6 +279,8 @@ def main():
             run_source(args[1], evaluator)
         except EppError as e:
             _fail(str(e))
+        if evaluator.test_stats and evaluator.test_stats['failed']:
+            sys.exit(1)
         return
 
     filepath = args[0]

@@ -8,6 +8,7 @@ E++ is a beginner-friendly, English-like programming language with a built-in Py
 - **String Interpolation:** `say "Hello {name}, you have {coins * 2} coins!"` — with Python-style format specs: `"total: {price:,.2f}"`
 
 - **Membership tests:** `if "apple" in fruits:` / `if user not in banned:`
+- **Built-in testing:** `test "name":` blocks with `expect x to_be y` / `to_be_true` / `to_throw` — plus `epp --test file.epp` for CI with exit codes
 - **Native GUI Framework:** Build desktop apps with zero boilerplate: `window`, `label`, `button`, `input`, `slider`, `progress`, `dropdown`, `checkbox`, `textbox`, `image`
 - **Canvas & Animation:** `canvas` + `draw circle on "cv" at 100 100 size 40 color "red"` + `every 50 milliseconds call tick` — games and art made simple
 - **Keyboard input:** `window ... on_key handle` turns key presses into function calls — full Snake game included in [tests/examples/snake.epp](tests/examples/snake.epp)
@@ -54,8 +55,9 @@ show_window
 
 From PyPI:
 ```bash
-pip install epp-lang
+pip install epp-ashmil
 epp my_script.epp        # or just: epp   (REPL)
+epp --test tests.epp     # run E++ test blocks
 ```
 
 Or straight from the repo:

@@ -24,6 +24,9 @@ jobs:
       - name: Run test suite
         run: python3 -m unittest discover -s tests -v
 
+      - name: Run E++-level tests
+        run: python3 -m interpreter.epp --test tests/epp/standard_tests.epp
+
       - name: Smoke-run examples
         run: |
           python3 -m interpreter.epp --check hello.epp

@@ -51,6 +51,7 @@ class Evaluator:
         self.import_stack = []      # abs paths currently being imported (cycle detection)
         self.imported_modules = set()  # abs paths already executed
         self.script_dir = os.getcwd()
+        self.test_stats = None      # {'passed': n, 'failed': n, 'current': name}
         if stdlib:
             self.register_stdlib(stdlib)
 
@@ -105,7 +106,110 @@ class Evaluator:
         result = None
         for stmt in node.statements:
             result = self.eval(stmt)
+        self.print_test_summary()
         return result
+
+    # ── Built-in test framework ──────────────────────────────────────────────
+
+    def _tests(self):
+        if self.test_stats is None:
+            self.test_stats = {'passed': 0, 'failed': 0, 'current': None}
+        return self.test_stats
+
+    def _record(self, ok, message, line=None):
+        stats = self._tests()
+        if ok:
+            stats['passed'] += 1
+        else:
+            stats['failed'] += 1
+            label = f"line {line}: " if line else ""
+            print(f"    ✘ {label}{message}")
+
+    def eval_TestStmt(self, node):
+        stats = self._tests()
+        before = stats['passed'] + stats['failed']
+        stats['current'] = node.name
+        print(f"▶ test: {node.name}")
+        try:
+            for stmt in node.body:
+                self.eval(stmt)
+        except EppError as e:
+            self._record(False, f"unexpected error — {e}",
+                         line=getattr(node, 'line', None))
+        ran = (stats['passed'] + stats['failed']) - before
+        failed_before = stats['failed']
+        # figure out if this test added failures by snapshotting is complex;
+        # simplest: report count of expectations run
+        print(f"  ({ran} check{'' if ran == 1 else 's'} ran)")
+        stats['current'] = None
+        return None
+
+    def eval_ExpectStmt(self, node):
+        stats = self._tests()
+        line = getattr(node, 'line', None)
+        matcher = node.matcher
+        try:
+            actual = self.eval(node.expr)
+            threw = None
+        except EppError as e:
+            actual = None
+            threw = e
+
+        if matcher == 'TO_THROW':
+            if threw is not None:
+                self._record(True, '', line)
+            else:
+                self._record(False, "expected an error, but the call succeeded", line)
+            return None
+
+        if threw is not None:
+            self._record(False, f"unexpected error — {threw}", line)
+            return None
+
+        if matcher == 'TO_BE':
+            expected = self.eval(node.expected)
+            ok = self._values_match(actual, expected)
+            if not ok:
+                self._record(False,
+                             f"expected {self.to_display_string(expected)}, "
+                             f"got {self.to_display_string(actual)}", line)
+            else:
+                self._record(True, '', line)
+        elif matcher == 'TO_BE_TRUE':
+            if self.is_truthy(actual):
+                self._record(True, '', line)
+            else:
+                self._record(False,
+                             f"expected a true value, got {self.to_display_string(actual)}",
+                             line)
+        elif matcher == 'TO_BE_FALSE':
+            if not self.is_truthy(actual):
+                self._record(True, '', line)
+            else:
+                self._record(False,
+                             f"expected a false value, got {self.to_display_string(actual)}",
+                             line)
+        return None
+
+    def _values_match(self, a, b):
+        if a == b:
+            return True
+        # friendly float tolerance: 0.1 + 0.2 to_be 0.3
+        if isinstance(a, (int, float)) and isinstance(b, (int, float)) \
+                and not isinstance(a, bool) and not isinstance(b, bool):
+            return abs(a - b) <= 1e-9
+        return False
+
+    def print_test_summary(self):
+        if not self.test_stats:
+            return
+        stats = self.test_stats
+        total = stats['passed'] + stats['failed']
+        if stats['failed']:
+            print(f"\n✘ TESTS: {stats['passed']} passed, {stats['failed']} failed "
+                  f"(of {total})")
+        else:
+            print(f"\n✔ TESTS: all {total} passed")
 
     # ── Core values ───────────────────────────────────────────────────────────
 
@@ -883,6 +987,13 @@ class Evaluator:
             self._register_widget(self.eval(node.widget_id), lbl)
         return None
 
+    def _bind_widget_keys(self, node, widget):
+        """Attach on_key handler to a specific widget (fires when focused)."""
+        if getattr(node, 'on_key', None):
+            widget.bind('<KeyPress>',
+                        lambda ev: self.fire_handler(node.on_key, ev.keysym))
+            widget.focus_set()
+
     def eval_ButtonStmt(self, node):
         tk = self._tk()
         root = self._ensure_root()
@@ -906,6 +1017,7 @@ class Evaluator:
             kwargs['bg'] = color
         btn = tk.Button(root, **kwargs)
         btn.place(x=x, y=y)
+        self._bind_widget_keys(node, btn)
         if node.widget_id:
             self._register_widget(self.eval(node.widget_id), btn)
         return None
@@ -957,6 +1069,7 @@ class Evaluator:
             entry.bind('<FocusIn>', _focus_in)
             entry.bind('<FocusOut>', _focus_out)
         entry.place(x=x, y=y)
+        self._bind_widget_keys(node, entry)
         self._register_widget(wid, entry, var)
         return None
 
@@ -1005,6 +1118,7 @@ class Evaluator:
         height = int(self.eval(node.height))
         tb = tk.Text(root, width=max(1, width // 8), height=max(1, height // 20))
         tb.place(x=x, y=y)
+        self._bind_widget_keys(node, tb)
         self._register_widget(wid, tb)
         return None
 

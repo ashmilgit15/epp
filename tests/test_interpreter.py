@@ -763,6 +763,47 @@ class TestRound2Features(unittest.TestCase):
         self.assertEqual(program.statements[0].on_key, 'handle')
         self.assertEqual(program.statements[1].on_key, 'handle')
 
+
+    def test_expect_to_be_pass_and_fail(self):
+        ev = evaluate('test "t":\n    expect 2 + 2 to_be 4')
+        self.assertEqual(ev.test_stats['passed'], 1)
+        self.assertEqual(ev.test_stats['failed'], 0)
+
+        ev = evaluate('test "t":\n    expect 1 + 1 to_be 3')
+        self.assertEqual(ev.test_stats['failed'], 1)
+        self.assertIn('expected 3, got 2', ev.captured_output)
+
+    def test_expect_matchers(self):
+        source = (
+            'test "matchers":\n'
+            '    expect true to_be_true\n'
+            '    expect 0 to_be_false\n'
+            '    expect 1 / 0 to_throw'
+        )
+        ev = evaluate(source)
+        self.assertEqual(ev.test_stats['passed'], 3)
+
+    def test_float_tolerance_in_expect(self):
+        ev = evaluate('test "floats":\n    expect 0.1 + 0.2 to_be 0.3')
+        self.assertEqual(ev.test_stats['failed'], 0)
+
+    def test_failing_tests_summary(self):
+        ev = evaluate(
+            'test "a":\n    expect 1 to_be 1\n'
+            'test "b":\n    expect 1 to_be 2'
+        )
+        self.assertIn('1 passed, 1 failed', ev.captured_output)
+
+    def test_on_key_parses_on_widgets(self):
+        program = parse(
+            'input "box" at 0 0 on_key typed\n'
+            'textbox "tb" at 0 40 on_key typed\n'
+            'button "Go" at 0 80 on_key keyed'
+        )
+        self.assertEqual(program.statements[0].on_key, 'typed')
+        self.assertEqual(program.statements[1].on_key, 'typed')
+        self.assertEqual(program.statements[2].on_key, 'keyed')
+
     def test_version_flag(self):
         import subprocess
         base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

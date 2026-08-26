@@ -1,0 +1,84 @@
+# Standard tests for the e++ interpreter itself — run with:
+#   python3 -m interpreter.epp --test tests/epp/standard_tests.epp
+
+# ── arithmetic ──
+test "arithmetic basics":
+    expect 2 + 3 * 4 to_be 14
+    expect 10 / 2 to_be 5
+    expect 17 % 5 to_be 2
+    expect 2 ^ 10 to_be 1024
+    expect -5 + 8 to_be 3
+
+# ── strings ──
+test "strings and interpolation":
+    name = "e++"
+    expect "Hello {name}!" to_be "Hello e++!"
+    expect "abc".upper() to_be "ABC"
+    expect len("hello") to_be 5
+    expect "ell" in "Hello" to_be_true
+
+# ── collections ──
+test "lists":
+    nums = [3, 1, 2]
+    expect sort(nums) to_be [1, 2, 3]
+    expect nums[0] to_be 3
+    expect nums[-1] to_be 2
+    nums.push(9)
+    expect nums.len() to_be 4
+    expect 9 in nums to_be_true
+
+test "dictionaries":
+    person = {"name": "Ada", "age": 36}
+    expect person["name"] to_be "Ada"
+    expect person.get("missing", "fallback") to_be "fallback"
+    expect "age" in person to_be_true
+
+# ── control flow ──
+test "loops and functions":
+    total = 0
+    for i in range(5):
+        total += i
+    expect total to_be 10
+
+    repeat 3 times:
+        total += 1
+    expect total to_be 13
+
+    func fib(n):
+        if n <= 1:
+            return n
+        return fib(n - 1) + fib(n - 2)
+    expect fib(10) to_be 55
+
+test "switch picks one branch":
+    result = ""
+    switch "b":
+        case "a":
+            result = "letter a"
+        case "b", "c":
+            result = "letter b or c"
+        default:
+            result = "other"
+    expect result to_be "letter b or c"
+
+# ── error handling ──
+test "try/catch protects and to_throw verifies":
+    expect 1 / 0 to_throw
+
+    caught = false
+    try:
+        x = missing_variable
+    catch err:
+        caught = true
+    expect caught to_be_true
+
+# ── classes ──
+test "classes with method arguments":
+    class Animal:
+        func init(name, sound):
+            self.name = name
+            self.sound = sound
+        func speak():
+            return "{self.name} says {self.sound}"
+    dog = Animal("Rex", "Woof")
+    expect dog.speak() to_be "Rex says Woof"

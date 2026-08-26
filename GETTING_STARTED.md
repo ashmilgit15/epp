@@ -215,6 +215,23 @@ Files are resolved relative to the importing file; each file runs once; circular
 
 ---
 
+## Testing Your Code
+
+```epp
+func add(a, b):
+    return a + b
+
+test "addition":
+    expect add(2, 2) to_be 4
+
+test "negatives":
+    expect add(-1, -1) to_be -2
+    expect add(0, 0) to_be 0
+```
+Run with `epp --test myfile.epp` — passing tests print ✔, failures show what
+was expected vs actual, and the command exits with an error code so CI tools
+catch regressions. Matchers: `to_be`, `to_be_true`, `to_be_false`, `to_throw`.
+
 ## Keyboard Games
 
 ```epp
