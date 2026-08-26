@@ -452,7 +452,7 @@ DO NOT output raw code as plain text — use markdown blocks so the IDE auto-app
                 messages: apiMessages,
                 temperature: 0.2,
                 top_p: 0.7,
-                max_tokens: 2048,
+                max_tokens: 16384,
                 stream: true
             }),
             signal: activeAiRequest.signal
