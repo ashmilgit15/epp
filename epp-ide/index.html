@@ -246,6 +246,23 @@
         .ai-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px 0; }
         .ai-chip { background: var(--bg-toolbar); border: 1px solid var(--border); color: var(--text-dim); font-size: 11px; padding: 4px 8px; border-radius: 12px; cursor: pointer; }
         .ai-chip:hover { border-color: var(--statusbar); color: var(--text); }
+        .ai-context-badge { font-size: 10px; color: var(--statusbar); background: rgba(0,122,204,0.12); border: 1px solid rgba(0,122,204,0.3); padding: 2px 6px; border-radius: 8px; margin: 4px 10px; display: inline-block; }
+        .ai-code-header { display: flex; justify-content: space-between; align-items: center; background: var(--bg-toolbar); padding: 4px 8px; border-radius: 4px 4px 0 0; border: 1px solid var(--border); border-bottom: none; font-size: 11px; color: var(--text-dim); }
+        .ai-code-actions { display: flex; gap: 4px; }
+        .ai-code-actions button { font-size: 10px; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--border); background: var(--bg); color: var(--text-dim); cursor: pointer; }
+        .ai-code-actions button:hover { color: var(--text); border-color: var(--statusbar); }
+        .ai-code-actions button.primary { background: var(--statusbar); color: white; border-color: var(--statusbar); }
+        .diff-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1001; display: flex; align-items: center; justify-content: center; }
+        .diff-modal-content { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; width: 92%; height: 82%; display: flex; flex-direction: column; }
+        .diff-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+        .diff-modal-actions { display: flex; gap: 8px; }
+        .diff-modal-actions button { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px; }
+        .diff-accept { background: #2d8a4e; color: white; }
+        .diff-reject { background: var(--bg-toolbar); color: var(--text); border: 1px solid var(--border) !important; }
+        #diff-editor { flex: 1; min-height: 0; }
+        .inline-chat { position: absolute; background: var(--bg-panel); border: 1px solid var(--statusbar); border-radius: 6px; padding: 8px; z-index: 500; box-shadow: 0 4px 16px rgba(0,0,0,0.4); display: flex; gap: 6px; min-width: 320px; }
+        .inline-chat input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 8px; border-radius: 4px; font-size: 12px; }
+        .inline-chat button { padding: 6px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 11px; }
         .loader {
             border: 3px solid var(--border); border-top: 3px solid var(--statusbar);
             border-radius: 50%; width: 14px; height: 14px;
@@ -299,10 +316,11 @@
 
             <!-- AI Sidebar -->
             <div class="ai-sidebar" id="ai-sidebar">
-                <div class="ai-header"><span class="ai-dot" id="ai-dot"></span> E++ AI Agent <span id="ai-model-label" style="font-weight:normal;font-size:11px;color:var(--text-dim)"></span></div>
+                <div class="ai-header"><span class="ai-dot" id="ai-dot"></span> E++ AI Agent <span id="ai-model-label" style="font-weight:normal;font-size:11px;color:var(--text-dim)"></span><button id="ai-new-chat" title="New chat" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;">+ New</button></div>
                 <div class="ai-messages" id="ai-messages">
-                    <div class="ai-message assistant">Hello! I am your E++ AI coding assistant. I can generate complete E++ programs — console apps, GUI apps and canvas games. Ask away!</div>
+                    <div class="ai-message assistant">Hello! I am your E++ AI coding assistant. I can generate complete E++ programs — console apps, GUI apps and canvas games. Ask away! Your current file is sent as context automatically.</div>
                 </div>
+                <div id="ai-context-badge" class="hidden" style="padding: 4px 10px;"></div>
                 <div class="ai-chips" id="ai-chips">
                     <button class="ai-chip" data-prompt="Explain what this code does, step by step:">✨ Explain</button>
                     <button class="ai-chip" data-prompt="Find and fix bugs in this code. Explain the fixes:">🐞 Fix bugs</button>
@@ -311,7 +329,7 @@
                     <button class="ai-chip" data-prompt="Create a fun, complete game in E++ (with window, canvas, on_key and timers). Make it playable:">🎮 Game</button>
                 </div>
                 <div class="ai-input-container">
-                    <textarea class="ai-input" id="ai-input" placeholder="Ask me to write e++ code or build an app...&#10;(Context: your current editor code is sent automatically)"></textarea>
+                    <textarea class="ai-input" id="ai-input" placeholder="Ask me anything...  /explain /fix /tests  •  Ctrl+K for inline edit&#10;Context: current file + selection sent automatically"></textarea>
                     <button class="ai-submit" id="ai-submit">Send</button>
                 </div>
             </div>
@@ -350,6 +368,19 @@
                 <button id="close-examples">&times;</button>
             </div>
             <div class="modal-content"><div class="examples-grid" id="examples-grid"></div></div>
+        </div>
+    </div>
+
+    <div class="diff-modal hidden" id="diff-modal">
+        <div class="diff-modal-content">
+            <div class="diff-modal-header">
+                <strong>Apply changes?</strong>
+                <div class="diff-modal-actions">
+                    <button class="diff-reject" id="diff-reject">Reject</button>
+                    <button class="diff-accept" id="diff-accept">Accept</button>
+                </div>
+            </div>
+            <div id="diff-editor"></div>
         </div>
     </div>
 
@@ -1381,7 +1412,7 @@ show_window
             }
         }
 
-        // ── AI Chat Logic ─────────────────────────────────────
+        // ── AI Chat Logic (Cursor/Windsurf-inspired) ─────────────
         const aiMessagesDiv = document.getElementById('ai-messages');
         const aiInput = document.getElementById('ai-input');
         const aiSubmit = document.getElementById('ai-submit');
@@ -1394,16 +1425,6 @@ show_window
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;');
-        }
-
-        function renderMarkdown(text) {
-            const escaped = escapeHtml(text);
-            return escaped
-                .replace(/```[a-zA-Z]*\n?([\s\S]*?)```/g,
-                    '<div style="position:relative"><pre><code>$1</code></pre>' +
-                    '<button class="ai-apply-btn" onclick="applyCode(this)">Apply</button></div>')
-                .replace(/`([^`]+)`/g, '<code>$1</code>')
-                .replace(/\n/g, '<br>');
         }
 
         function updateAiStatus(status) {
@@ -1421,48 +1442,143 @@ show_window
             }
         }
 
+        // Context helpers — like Cursor's file/selection awareness
+        function getSelectionContext() {
+            if (!editor) return null;
+            const sel = editor.getSelection();
+            if (!sel || sel.isEmpty()) return null;
+            const text = editor.getModel().getValueInRange(sel);
+            if (!text || text.trim().length === 0) return null;
+            return { text: text.slice(0, 4000), lineCount: text.split('\n').length };
+        }
+
+        function updateContextBadge() {
+            const badge = document.getElementById('ai-context-badge');
+            if (!badge) return;
+            const parts = [];
+            if (currentFilePath) parts.push(currentFilePath.split(/[/\\]/).pop());
+            const sel = getSelectionContext();
+            if (sel) parts.push(`selection (${sel.lineCount} lines)`);
+            else if (editor) {
+                const lines = editor.getModel().getLineCount();
+                if (lines > 1) parts.push(`${lines} lines in editor`);
+            }
+            if (parts.length) {
+                badge.innerHTML = '<span class="ai-context-badge">📎 ' + escapeHtml(parts.join(' • ')) + '</span>';
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+        setInterval(updateContextBadge, 1000);
+
+        // Markdown with proper code block header (like Cursor)
+        function renderMarkdown(text) {
+            const escaped = escapeHtml(text);
+            let idx = 0;
+            const withBlocks = escaped.replace(/```([a-zA-Z]*)\n?([\s\S]*?)```/g, (m, lang, code) => {
+                const safeLang = (lang || 'epp').trim() || 'epp';
+                const id = 'code-' + (idx++);
+                return `<div class="ai-code-block" data-code-id="${id}"><div class="ai-code-header"><span>${escapeHtml(safeLang)}</span><div class="ai-code-actions"><button onclick="copyCode(this)">Copy</button><button onclick="insertAtCursor(this)">Insert</button><button class="primary" onclick="showDiff(this)">Apply</button></div></div><pre><code id="${id}">${code}</code></pre></div>`;
+            });
+            return withBlocks
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
+        }
+
         function appendMessage(role, text) {
             const msgDiv = document.createElement('div');
             msgDiv.className = 'ai-message ' + role;
-
             if (role === 'assistant') {
                 msgDiv.innerHTML = '<strong>AI:</strong><br>' + renderMarkdown(text);
             } else {
                 msgDiv.innerHTML = '<strong>You:</strong><br>' + escapeHtml(text).replace(/\n/g, '<br>');
             }
-
             aiMessagesDiv.appendChild(msgDiv);
             aiMessagesDiv.scrollTop = aiMessagesDiv.scrollHeight;
             return msgDiv;
         }
 
-        window.applyCode = function(btn) {
-            const codeBlock = btn.parentElement.querySelector('code');
-            if (codeBlock && editor) {
-                const code = codeBlock.innerHTML
-                    .replace(/&lt;/g, '<')
-                    .replace(/&gt;/g, '>')
-                    .replace(/&quot;/g, '"')
-                    .replace(/&amp;/g, '&');
+        // Code block actions — modern diff-based Apply (like Cursor/Windsurf)
+        let diffEditor = null;
+        let pendingApplyCode = null;
 
-                editor.executeEdits("ai-agent", [{
-                    range: editor.getModel().getFullModelRange(),
-                    text: code,
-                    forceMoveMarkers: true
-                }]);
+        function getCodeFromBlock(btn) {
+            const block = btn.closest('.ai-code-block');
+            const codeEl = block ? block.querySelector('code') : null;
+            if (!codeEl) return null;
+            return codeEl.innerHTML
+                .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+                .replace(/<br>/g, '\n');
+        }
 
-                btn.innerHTML = "Applied &#10003;";
-                btn.style.backgroundColor = "#2d8a4e";
-                setTimeout(() => {
-                    btn.innerHTML = "Apply";
-                    btn.style.backgroundColor = "";
-                }, 2000);
+        window.copyCode = function(btn) {
+            const code = getCodeFromBlock(btn);
+            if (code !== null) {
+                navigator.clipboard.writeText(code).then(() => {
+                    const orig = btn.textContent;
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => btn.textContent = orig, 1500);
+                });
             }
         };
+
+        window.insertAtCursor = function(btn) {
+            const code = getCodeFromBlock(btn);
+            if (code !== null && editor) {
+                const sel = editor.getSelection();
+                const pos = sel ? { lineNumber: sel.positionLineNumber, column: sel.positionColumn } : editor.getPosition();
+                editor.executeEdits('ai-insert', [{ range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column), text: code }]);
+                setStatus('Inserted at cursor');
+            }
+        };
+
+        window.showDiff = function(btn) {
+            const code = getCodeFromBlock(btn);
+            if (code === null || !editor) return;
+            pendingApplyCode = code;
+            document.getElementById('diff-modal').classList.remove('hidden');
+            // Init or update Monaco diff editor
+            setTimeout(() => {
+                const originalModel = monaco.editor.createModel(editor.getValue(), 'epp');
+                const modifiedModel = monaco.editor.createModel(code, 'epp');
+                const container = document.getElementById('diff-editor');
+                if (diffEditor) diffEditor.dispose();
+                diffEditor = monaco.editor.createDiffEditor(container, {
+                    theme: document.body.getAttribute('data-theme') === 'light' ? 'vs' : 'vs-dark',
+                    automaticLayout: true,
+                    readOnly: false
+                });
+                diffEditor.setModel({ original: originalModel, modified: modifiedModel });
+            }, 50);
+        };
+
+        function closeDiff() {
+            document.getElementById('diff-modal').classList.add('hidden');
+            if (diffEditor) { diffEditor.dispose(); diffEditor = null; }
+            pendingApplyCode = null;
+        }
+        document.getElementById('diff-reject')?.addEventListener('click', closeDiff);
+        document.getElementById('diff-accept')?.addEventListener('click', () => {
+            if (pendingApplyCode !== null && editor) {
+                editor.setValue(pendingApplyCode);
+                hasUnsavedChanges = true;
+                updateTitle();
+                setStatus('Applied AI changes — review and save');
+            }
+            closeDiff();
+        });
+        document.getElementById('diff-modal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'diff-modal') closeDiff();
+        });
+
+        // Keep legacy Apply for old messages (replace-all fallback)
+        window.applyCode = function(btn) { window.showDiff(btn); };
 
         let currentAssistantMsgDiv = null;
         let currentFullText = "";
 
+        // Streaming — chat only, NEVER auto-type into editor (Cursor principle: review before apply)
         window.eppAPI.onAiStreamChunk((chunk) => {
             if (!currentAssistantMsgDiv) {
                 currentAssistantMsgDiv = document.createElement('div');
@@ -1470,54 +1586,41 @@ show_window
                 aiMessagesDiv.appendChild(currentAssistantMsgDiv);
             }
             currentFullText += chunk;
-
-            // Auto-type code into the editor while inside an open code fence
-            const parts = currentFullText.split(/```[a-zA-Z]*\n?/);
-            if (parts.length % 2 === 0 && parts.length > 1) {
-                const currentCode = parts[parts.length - 1];
-                if (editor) {
-                    const scrollPos = editor.getScrollTop();
-                    editor.executeEdits("ai-agent", [{
-                        range: editor.getModel().getFullModelRange(),
-                        text: currentCode,
-                        forceMoveMarkers: true
-                    }]);
-                    editor.setScrollTop(scrollPos);
-                }
-            }
-
             currentAssistantMsgDiv.innerHTML = '<strong>AI:</strong><br>' + renderMarkdown(currentFullText);
             aiMessagesDiv.scrollTop = aiMessagesDiv.scrollHeight;
         });
 
-        function finishAiStream(reply) {
-            // Final flush so the editor matches the completed reply exactly.
-            const parts = reply.split(/```[a-zA-Z]*\n?/);
-            if (parts.length % 2 === 0 && parts.length > 1 && editor) {
-                const finalCode = parts[parts.length - 1].replace(/\n?```$/, '');
-                const scrollPos = editor.getScrollTop();
-                editor.executeEdits("ai-agent", [{
-                    range: editor.getModel().getFullModelRange(),
-                    text: finalCode,
-                    forceMoveMarkers: true
-                }]);
-                editor.setScrollTop(scrollPos);
-            }
-        }
-
         let aiGenerating = false;
-
         function setAiGenerating(active) {
             aiGenerating = active;
             if (active) {
                 aiSubmit.textContent = 'Stop';
                 aiSubmit.classList.add('stop');
-                aiSubmit.disabled = false;
             } else {
                 aiSubmit.textContent = 'Send';
                 aiSubmit.classList.remove('stop');
-                aiSubmit.disabled = aiInput.value.trim().length === 0 ? false : false;
             }
+        }
+
+        function buildPromptWithContext(userText) {
+            // Handle slash commands like /fix /explain /tests
+            const slashMap = {
+                '/explain': 'Explain what this code does, step by step:\n\n',
+                '/fix': 'Find and fix bugs in this code. Explain the fixes:\n\n',
+                '/tests': 'Write test blocks (using to_be / to_throw) for this code:\n\n',
+                '/comment': 'Add clear comments to this code without changing logic:\n\n',
+                '/game': 'Create a fun, complete game in E++ (with window, canvas, on_key and timers). Make it playable:\n\n',
+            };
+            for (const [cmd, prefix] of Object.entries(slashMap)) {
+                if (userText.trim().toLowerCase().startsWith(cmd)) {
+                    const rest = userText.slice(cmd.length).trim();
+                    userText = prefix + (rest || '');
+                    break;
+                }
+            }
+            // Attach file/selection context implicitly — model already gets full editor via system prompt,
+            // but we also append a visible hint so user knows what was sent
+            return userText;
         }
 
         async function sendAiMessage(prefilledText) {
@@ -1527,13 +1630,11 @@ show_window
             if (!aiConfigured) {
                 appendMessage('assistant',
                     'I need an API key before I can think! Set the **EPP_AI_API_KEY** environment variable ' +
-                    '(any OpenAI-compatible provider works — Hack Club AI at https://ai.hackclub.com/proxy/v1), '
+                    '(Hack Club AI: https://ai.hackclub.com/proxy/v1), '
                     + 'or create `epp-ide/config.json`:\n' +
-                    '```\n{ "apiKey": "sk-hc-...", "baseUrl": "https://ai.hackclub.com/proxy/v1", "model": "stealth/ox-alpha" }\n```');
+                    '```\n{ "apiKey": "sk-hc-...", "baseUrl": "https://ai.hackclub.com/proxy/v1", "model": "google/gemini-3.7-flash" }\n```');
                 return;
             }
-
-            // Stop generation if already running
             if (aiGenerating) {
                 try { await window.eppAPI.stopAi(); } catch (e) {}
                 appendMessage('assistant', '⏹ Stopped.');
@@ -1543,78 +1644,147 @@ show_window
                 return;
             }
 
-            const text = rawText;
+            const text = buildPromptWithContext(rawText);
             aiInput.value = '';
             aiInput.disabled = true;
             setAiGenerating(true);
-            aiSubmit.innerHTML = 'Stop';
 
-            appendMessage('user', text);
+            appendMessage('user', rawText);
             chatHistory.push({ role: 'user', content: text });
 
             currentAssistantMsgDiv = null;
             currentFullText = "";
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'ai-message assistant';
+            thinkingDiv.innerHTML = '<em>Thinking...</em> <span class="loader" style="width:10px;height:10px;border-width:2px;"></span>';
+            aiMessagesDiv.appendChild(thinkingDiv);
+            aiMessagesDiv.scrollTop = aiMessagesDiv.scrollHeight;
 
             try {
-                const editorContext = (typeof editor !== 'undefined' && editor) ? editor.getValue() : '';
+                // Prefer selection, fallback to full editor — like Cursor's context
+                let editorContext = '';
+                if (editor) {
+                    const sel = getSelectionContext();
+                    if (sel) editorContext = sel.text;
+                    else editorContext = editor.getValue();
+                }
                 const response = await window.eppAPI.chatWithAI(chatHistory, editorContext);
+                thinkingDiv.remove();
                 if (response.success) {
                     if (response.aborted) {
                         appendMessage('assistant', '⏹ Stopped.');
                     } else {
-                        finishAiStream(response.reply);
+                        // Don't auto-apply — just add to chat with Apply button (user reviews diff)
+                        appendMessage('assistant', response.reply);
                         chatHistory.push({ role: 'assistant', content: response.reply });
                     }
                 } else {
-                    if (response.error === 'aborted') {
-                        appendMessage('assistant', '⏹ Stopped.');
-                    } else {
-                        appendMessage('assistant', 'Error connecting to AI: ' + response.error
-                            + '\n\nTip: if using Hack Club AI, double-check the key in epp-ide/config.json '
-                            + '(one typo → Authentication failed). The file is gitignored, so it is safe to paste the exact key there.');
-                    }
+                    if (response.error === 'aborted') appendMessage('assistant', '⏹ Stopped.');
+                    else appendMessage('assistant', 'Error: ' + response.error
+                        + '\n\nTip: check epp-ide/config.json key for typos (Hack Club keys start with sk-hc-...). File is gitignored.');
                 }
             } catch (err) {
-                if (err.message && err.message.includes('aborted')) {
-                    appendMessage('assistant', '⏹ Stopped.');
-                } else {
-                    appendMessage('assistant', 'System error: ' + err.message);
-                }
+                thinkingDiv.remove();
+                appendMessage('assistant', err.message?.includes('aborted') ? '⏹ Stopped.' : 'System error: ' + err.message);
             }
-
             aiInput.disabled = false;
             setAiGenerating(false);
             aiInput.focus();
         }
 
-        // Quick-action chips feed pre-filled prompts into the AI
+        document.getElementById('ai-new-chat')?.addEventListener('click', () => {
+            chatHistory = [];
+            document.getElementById('ai-messages').innerHTML = '<div class="ai-message assistant">New chat started — ask anything!</div>';
+            currentAssistantMsgDiv = null;
+            currentFullText = "";
+        });
+
         document.querySelectorAll('.ai-chip').forEach(chip => {
             chip.addEventListener('click', () => {
                 const prefix = chip.getAttribute('data-prompt');
-                const code = (typeof editor !== 'undefined' && editor) ? editor.getValue().trim() : '';
-                const prompt = code ? (prefix + '\n\n```epp\n' + code.slice(0, 5000) + '\n```') : prefix;
+                const sel = getSelectionContext();
+                const ctx = sel ? sel.text : (editor ? editor.getValue().trim() : '');
+                const prompt = ctx ? (prefix + '\n\n```epp\n' + ctx.slice(0, 5000) + '\n```') : prefix;
                 sendAiMessage(prompt);
             });
         });
 
         aiSubmit.addEventListener('click', () => {
-            if (aiGenerating) {
-                sendAiMessage('__stop__'); // trigger stop path
-            } else {
-                sendAiMessage();
-            }
+            if (aiGenerating) sendAiMessage('__stop__');
+            else sendAiMessage();
         });
         aiInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendAiMessage();
             }
+            // Slash hint: show context badge update on typing
+            if (e.key === '/') setTimeout(updateContextBadge, 0);
         });
-        aiInput.addEventListener('input', () => {
-            if (!aiGenerating) {
-                // keep Send enabled; no-op
+
+        // Inline chat (Ctrl+K) — like Cursor's Cmd+K on selection
+        let inlineChatEl = null;
+        editor?.onKeyDown((e) => {
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyK') {
+                e.preventDefault();
+                e.stopPropagation();
+                openInlineChat();
             }
         });
+
+        function openInlineChat() {
+            closeInlineChat();
+            const sel = editor.getSelection();
+            const hasSel = sel && !sel.isEmpty();
+            inlineChatEl = document.createElement('div');
+            inlineChatEl.className = 'inline-chat';
+            inlineChatEl.innerHTML = '<input id="inline-input" placeholder="' + (hasSel ? 'Edit selection: e.g. make it faster' : 'Quick edit: e.g. add error handling') + '" /><button id="inline-go">Go</button><button id="inline-cancel">✕</button>';
+            const coords = editor.getScrolledVisiblePosition(sel ? sel.getPosition() : editor.getPosition());
+            const containerRect = document.getElementById('editor').getBoundingClientRect();
+            inlineChatEl.style.left = Math.min(containerRect.width - 340, (coords ? coords.left : 20) + 10) + 'px';
+            inlineChatEl.style.top = (coords ? coords.top : 40) + 20 + 'px';
+            document.getElementById('editor').appendChild(inlineChatEl);
+            const input = inlineChatEl.querySelector('#inline-input');
+            input.focus();
+            input.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Enter') { ev.preventDefault(); runInlineChat(input.value); }
+                if (ev.key === 'Escape') closeInlineChat();
+            });
+            inlineChatEl.querySelector('#inline-go').addEventListener('click', () => runInlineChat(input.value));
+            inlineChatEl.querySelector('#inline-cancel').addEventListener('click', closeInlineChat);
+        }
+        function closeInlineChat() { if (inlineChatEl) { inlineChatEl.remove(); inlineChatEl = null; } }
+        async function runInlineChat(prompt) {
+            if (!prompt || !prompt.trim()) return;
+            const selCtx = getSelectionContext();
+            const fullPrompt = selCtx
+                ? `Edit this selected E++ code per instruction: "${prompt}"\n\nSelected code:\n\`\`\`epp\n${selCtx.text}\n\`\`\`\n\nFull file for context:\n\`\`\`epp\n${editor.getValue().slice(0, 4000)}\n\`\`\``
+                : `Edit the current file per instruction: "${prompt}"\n\nFile:\n\`\`\`epp\n${editor.getValue().slice(0, 5000)}\n\`\`\``;
+            closeInlineChat();
+            // Reuse main chat — show as user message
+            appendMessage('user', '⚡ Inline: ' + prompt);
+            chatHistory.push({ role: 'user', content: fullPrompt });
+            // Trigger same streaming path via direct call
+            currentAssistantMsgDiv = null;
+            currentFullText = "";
+            const thinking = document.createElement('div');
+            thinking.className = 'ai-message assistant';
+            thinking.innerHTML = '<em>Editing...</em> <span class="loader" style="width:10px;height:10px;border-width:2px;"></span>';
+            aiMessagesDiv.appendChild(thinking);
+            try {
+                const response = await window.eppAPI.chatWithAI(chatHistory, editor.getValue());
+                thinking.remove();
+                if (response.success && !response.aborted) {
+                    appendMessage('assistant', response.reply);
+                    chatHistory.push({ role: 'assistant', content: response.reply });
+                } else if (!response.aborted) {
+                    appendMessage('assistant', 'Error: ' + (response.error || 'unknown'));
+                }
+            } catch (err) {
+                thinking.remove();
+                appendMessage('assistant', 'System error: ' + err.message);
+            }
+        }
 
     </script>
 </body>

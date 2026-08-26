@@ -108,16 +108,28 @@ ipcMain.handle('write-file', async (event, filePath, content) => {
 
 ipcMain.handle('list-files', async (event, dirPath) => {
     try {
-        const files = fs.readdirSync(dirPath).map(name => {
+        const entries = fs.readdirSync(dirPath);
+        const files = [];
+        for (const name of entries) {
             const fullPath = path.join(dirPath, name);
-            const stat = fs.statSync(fullPath);
-            return {
-                name,
-                path: fullPath,
-                isDirectory: stat.isDirectory(),
-                isFile: stat.isFile()
-            };
-        });
+            try {
+                const stat = fs.lstatSync(fullPath);
+                // Skip broken symlinks
+                if (stat.isSymbolicLink()) {
+                    try { fs.statSync(fullPath); } catch { continue; }
+                }
+                const realStat = stat.isSymbolicLink() ? fs.statSync(fullPath) : stat;
+                files.push({
+                    name,
+                    path: fullPath,
+                    isDirectory: realStat.isDirectory(),
+                    isFile: realStat.isFile()
+                });
+            } catch {
+                // Skip entries we can't stat (broken symlinks, permission errors)
+                continue;
+            }
+        }
         return { success: true, files };
     } catch (error) {
         return { success: false, error: error.message };
