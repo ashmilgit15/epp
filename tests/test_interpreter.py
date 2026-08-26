@@ -624,5 +624,113 @@ class TestRegressionExamples(unittest.TestCase):
         self.assertIn('You are an adult!', ev.captured_output)
 
 
+class TestRound2Features(unittest.TestCase):
+    """v2.1 features: positions, membership, format specs, dict.get."""
+
+    def out(self, evaluator):
+        return evaluator.captured_output
+
+    def test_membership_in(self):
+        ev = evaluate('l = [1, 2, 3]\nr = 2 in l')
+        self.assertTrue(ev.global_scope['r'])
+
+    def test_membership_not_in(self):
+        ev = evaluate('l = [1, 2, 3]\nr = 9 not in l')
+        self.assertTrue(ev.global_scope['r'])
+
+    def test_membership_string_and_dict(self):
+        source = (
+            'a = "ell" in "Hello"\n'
+            'd = {"k": 1}\n'
+            'b = "k" in d\n'
+            'c = "x" not in d'
+        )
+        ev = evaluate(source)
+        self.assertEqual((ev.global_scope['a'], ev.global_scope['b'],
+                          ev.global_scope['c']), (True, True, True))
+
+    def test_membership_invalid_target_message(self):
+        with self.assertRaises(EvalError) as cm:
+            evaluate('r = 1 in 5')
+        self.assertIn('list, string or dictionary', str(cm.exception))
+
+    def test_format_spec_float(self):
+        ev = evaluate('pi = 3.14159\nsay "pi={pi:.2f}"')
+        self.assertIn('pi=3.14', self.out(ev))
+
+    def test_format_spec_zero_pad_and_thousands(self):
+        ev = evaluate('say "{7:03d} {1234567:,}"')
+        self.assertIn('007 1,234,567', self.out(ev))
+
+    def test_format_spec_with_colon_in_string_still_works(self):
+        ev = evaluate('d = {"a:b": 5}\nsay "{d[\'a:b\']}"')
+        self.assertIn('5', self.out(ev))
+
+    def test_runtime_error_has_line_number(self):
+        with self.assertRaises(EvalError) as cm:
+            evaluate('a = 1\nb = 2\nc = a + ghost')
+        err = cm.exception
+        self.assertIsNotNone(err.line)
+        self.assertGreaterEqual(err.line, 3)
+
+    def test_error_line_survives_function_call(self):
+        source = (
+            'func go():\n'
+            '    return nothing_here\n'
+            '\n'
+            'x = go()'
+        )
+        with self.assertRaises(EvalError) as cm:
+            evaluate(source)
+        self.assertEqual(cm.exception.line, 2)
+
+    def test_dict_get_method(self):
+        source = (
+            'd = {"name": "Ada"}\n'
+            'a = d.get("name")\n'
+            'b = d.get("missing")\n'
+            'c = d.get("missing", "fallback")'
+        )
+        ev = evaluate(source)
+        self.assertEqual(ev.global_scope['a'], 'Ada')
+        self.assertIsNone(ev.global_scope['b'])
+        self.assertEqual(ev.global_scope['c'], 'fallback')
+
+    def test_check_mode_json(self):
+        import json
+        import subprocess
+        import tempfile
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with tempfile.NamedTemporaryFile('w', suffix='.epp', delete=False) as f:
+            f.write('x = 1\nfor i in:\n')
+            path = f.name
+        try:
+            proc = subprocess.run(
+                [sys.executable, '-m', 'interpreter.epp', '--check', path, '--json'],
+                capture_output=True, text=True,
+                cwd=base
+            )
+            payload = None
+            for line in proc.stdout.splitlines():
+                line = line.strip()
+                if line.startswith('{'):
+                    payload = json.loads(line)
+                    break
+            self.assertIsNotNone(payload, f'no JSON in output: {proc.stdout!r} {proc.stderr!r}')
+            self.assertFalse(payload['ok'])
+            self.assertGreaterEqual(payload['errors'][0]['line'], 1)
+        finally:
+            os.unlink(path)
+
+    def test_version_flag(self):
+        import subprocess
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        proc = subprocess.run(
+            [sys.executable, '-m', 'interpreter.epp', '--version'],
+            capture_output=True, text=True, cwd=base
+        )
+        self.assertIn('E++ v', proc.stdout)
+
+
 if __name__ == '__main__':
     unittest.main()

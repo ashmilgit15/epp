@@ -1,4 +1,5 @@
 import os
+import re
 from interpreter.nodes import *
 from interpreter.errors import (EppError, EvalError, ReturnException,
                                 BreakException, ContinueException)
@@ -80,7 +81,16 @@ class Evaluator:
         method = getattr(self, method_name, None)
         if method is None:
             raise EvalError(f"No evaluator for {type(node).__name__}")
-        return method(node)
+        try:
+            return method(node)
+        except EppError as e:
+            # Attach source position from the node if the error doesn't have one
+            if e.line is None:
+                line = getattr(node, 'line', None)
+                if line is not None:
+                    e.line = line
+                    e.column = getattr(node, 'column', None)
+            raise
 
     def run(self, source, filename=None):
         from interpreter.lexer import Lexer
@@ -128,7 +138,7 @@ class Evaluator:
         return value
 
     def interpolate(self, text):
-        """Interpolate {expression} inside strings: "Hello {name}"."""
+        """Interpolate {expression} inside strings: "Hello {name}", "{pi:.2f}"."""
         result = []
         i = 0
         n = len(text)
@@ -145,9 +155,14 @@ class Evaluator:
                     j += 1
                 if depth == 0:
                     inner = text[i + 1:j - 1]
+                    expr_code, fmt = self._split_format_spec(inner)
                     try:
-                        val = self.eval_snippet(inner)
-                        result.append(self.to_display_string(val))
+                        val = self.eval_snippet(expr_code)
+                        if fmt:
+                            val = format(val, fmt)
+                        else:
+                            val = self.to_display_string(val)
+                        result.append(val)
                         i = j
                         continue
                     except EppError:
@@ -158,6 +173,20 @@ class Evaluator:
                 result.append(ch)
                 i += 1
         return ''.join(result)
+
+    _FORMAT_SPEC_RE = re.compile(r'^[<>^+\-]?[0-9]*(\.[0-9]+)?[dfgesb%,]$')
+
+    def _split_format_spec(self, inner):
+        """Split '{expr:spec}' into (expr, spec); spec must look like a Python
+        format spec (e.g. '.2f', '05d', ',d'). Quoted content never splits."""
+        if ':' not in inner:
+            return inner, None
+        expr, _, spec = inner.rpartition(':')
+        if not expr or not spec or ("'" in spec) or ('"' in spec):
+            return inner, None
+        if self._FORMAT_SPEC_RE.match(spec):
+            return expr, spec
+        return inner, None
 
     def eval_snippet(self, code):
         """Compile & evaluate a tiny expression embedded in a string."""
@@ -261,21 +290,31 @@ class Evaluator:
     def eval_Comparison(self, node):
         left = self.eval(node.left)
         right = self.eval(node.right)
-        op = self.COMPARISON_MAP.get(node.operator)
-        if op == '==':
+        op = node.operator
+        if op == 'in' or op == 'not in':
+            if isinstance(right, (list, dict, str)):
+                result = left in right
+            else:
+                raise EvalError(
+                    f"'{op}' needs a list, string or dictionary on the right",
+                    suggestion="e.g. if \"a\" in my_list:"
+                )
+            return result if op == 'in' else not result
+        mapped = self.COMPARISON_MAP.get(op)
+        if mapped == '==':
             return left == right
-        elif op == '!=':
+        elif mapped == '!=':
             return left != right
-        elif op == '>':
+        elif mapped == '>':
             return left > right
-        elif op == '<':
+        elif mapped == '<':
             return left < right
-        elif op == '>=':
+        elif mapped == '>=':
             return left >= right
-        elif op == '<=':
+        elif mapped == '<=':
             return left <= right
         raise EvalError(
-            f"Unknown comparison '{node.operator}'",
+            f"Unknown comparison '{op}'",
             suggestion="Try: is, is not, is greater than, is less than"
         )
 
@@ -489,12 +528,16 @@ class Evaluator:
             return list(d.values())
         elif method == 'contains' or method == 'has':
             return (args[0] if args else None) in d
+        elif method == 'get':
+            key = args[0] if args else None
+            default = args[1] if len(args) > 1 else None
+            return d[key] if key in d else default
         elif method == 'remove' or method == 'delete':
             d.pop(args[0] if args else None, None)
             return None
         raise EvalError(
             f"Dict has no method '{method}'",
-            suggestion="Try keys, values, len, contains or remove"
+            suggestion="Try keys, values, len, contains, get or remove"
         )
 
     def eval_MemberAccess(self, node):

@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('eppAPI', {
     deleteFile: (filePath) => ipcRenderer.invoke('delete-file', filePath),
     renameFile: (oldPath, newPath) => ipcRenderer.invoke('rename-file', oldPath, newPath),
     runEpp: (filePath) => ipcRenderer.invoke('run-epp', filePath),
+    checkEpp: (filePath) => ipcRenderer.invoke('check-epp', filePath),
     stopRun: () => ipcRenderer.invoke('stop-run'),
     onRunOutput: (callback) => ipcRenderer.on('run-output', (event, data) => callback(data)),
     onRunComplete: (callback) => ipcRenderer.on('run-complete', (event, code) => callback(code)),

@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  interpreter-tests:
+    name: Interpreter tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run test suite
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Smoke-run examples
+        run: |
+          python3 -m interpreter.epp --check hello.epp
+          python3 -m interpreter.epp tests/examples/feature_tour.epp > /dev/null
+          printf 'Tester\n21\n' | python3 -m interpreter.epp tests/examples/input_test.epp > /dev/null
+          printf '50\n25\n37\n42\n' | python3 -m interpreter.epp tests/examples/guess_game.epp > /dev/null
+
+      - name: Parse-check GUI examples (headless)
+        run: |
+          for f in tests/examples/starfield.epp tests/examples/gui_hello.epp; do
+            python3 -m interpreter.epp --check "$f"
+          done
+
+  ide-syntax:
+    name: IDE syntax checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check main.js / preload.js
+        run: |
+          node --check epp-ide/main.js
+          node --check epp-ide/preload.js
+
+      - name: Check inline renderer script
+        run: node .github/scripts/check-inline-js.js
+
+  security:
+    name: No secrets committed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan for hardcoded API keys
+        run: |
+          if grep -rInE "nvapi-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{20,}|gsk_[A-Za-z0-9]{20,}" \
+              --include="*.js" --include="*.py" --include="*.json" \
+              --exclude-dir=node_modules . ; then
+            echo "Hardcoded API key detected!"
+            exit 1
+          else
+            echo "Clean."
+          fi

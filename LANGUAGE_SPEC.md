@@ -1,4 +1,4 @@
-# e++ Language Specification (v2)
+# e++ Language Specification (v2.1)
 
 ## Overview
 
@@ -64,6 +64,12 @@ say "Hello, {name}!"                 # Hello, World!
 say "2 + 2 is {2 + 2}"               # 2 + 2 is 4
 user = {"name": "Zoe"}
 say "Hi {user['name'].upper()}!"     # Hi ZOE!
+
+# Format specs after a colon (Python-style)
+pi = 3.14159
+say "pi ≈ {pi:.2f}"                  # pi ≈ 3.14
+say "id: {42:05d}"                   # id: 00042
+say "{1234567:,}"                    # 1,234,567
 ```
 > Tip: use single quotes for strings inside `{}` — nested double quotes are not allowed.
 
@@ -99,6 +105,12 @@ if score >= 60:               # or: score is greater than or equal to 60
 x = 5 != 3                    # true   (or: 5 is not equal to 3)
 y = 4 <= 4                    # true   (or: 4 is less than or equal to 4)
 z = "a" is not "b"            # true
+
+# Membership: 'in' and 'not in' work on lists, strings and dicts
+if "apple" in fruits:
+    say "we have apples"
+if user["name"] not in banned:
+    say "welcome!"
 ```
 
 ### Boolean Logic
@@ -273,7 +285,8 @@ s.starts_with("He")     s.ends_with("lo")
 s.replace("l", "L")     s.split("l")    s.index_of("o")   s.len()
 
 d = {"a": 1}
-d.keys()    d.values()  d.contains("a")   d.remove("a")   d.len()
+d.keys()    d.values()  d.contains("a")   d.get("a")        d.get("x", 0)
+d.remove("a")           d.len()
 ```
 
 ## Indexing
@@ -396,15 +409,28 @@ Shapes: `line` (`from X1 Y1 to X2 Y2`) · `rectangle` (`from ... to ...`, alias 
 
 ## Error Messages
 
-Errors point at the offending line and usually include a suggestion:
+Errors point at the offending line **and column**, and usually include a suggestion. Runtime errors carry the position of the expression that failed, even inside functions:
 ```
-Error at line 3: 'naame' is not defined — Did you forget to assign it?
-Error at line 7: List index 5 out of range (length 3)
+Error at line 3, column 20: 'naame' is not defined — Did you forget to assign it?
+Error at line 7, column 9: List index 5 out of range (length 3)
 Error at line 12: Cannot divide by zero
-Error at line 2: I expected 'times' here — e.g. repeat 5 times:
+Error at line 2, column 5: I expected a value here but found end of line
 Error: Circular import detected: 'a.epp' imports itself
 ```
-The IDE highlights the line automatically after a failed run.
+The IDE highlights the line automatically after a failed run — and shows live squiggles as you type (see below).
+
+## Command-line Tools
+
+```bash
+python3 -m interpreter.epp program.epp        # run
+python3 -m interpreter.epp                    # REPL
+python3 -m interpreter.epp -e 'say 2 ^ 8'     # one-liner
+python3 -m interpreter.epp --check file.epp   # parse-only check (exit code 1 on error)
+python3 -m interpreter.epp --check file.epp --json   # machine-readable output for tools
+python3 -m interpreter.epp --tokens file.epp  # dump the token stream (debugging)
+python3 -m interpreter.epp --ast file.epp     # dump the syntax tree (debugging)
+```
+`--check` is what powers the IDE's live error squiggles.
 
 ## Reserved Words
 

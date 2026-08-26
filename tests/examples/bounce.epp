@@ -1,0 +1,31 @@
+# Bouncing ball — animation with canvas + timers
+# (GUI required: needs a display + python3-tk)
+
+window "Bounce" width 520 height 440 color "#101018"
+canvas "cv" width 500 height 380 color "#101018"
+
+label "" at 20 395 font_size 12 color "gray" id "hud"
+
+x = 250
+y = 100
+vx = 6
+vy = 4
+
+func tick():
+    # move the ball
+    x += vx
+    y += vy
+    # bounce off the walls
+    if x < 10 or x > 490:
+        vx = -vx
+    if y < 10 or y > 370:
+        vy = -vy
+        say "boing!"
+    # redraw the scene
+    clear_canvas "cv"
+    draw circle on "cv" at x y size 12 color "cyan" fill "#00bcd4"
+    draw line on "cv" from 0 379 to 500 379 color "#333355" width 2
+    set_text "hud" to "position: {x:.0f},{y:.0f}   speed: {vx:.0f},{vy:.0f}"
+
+every 33 milliseconds call tick
+show_window

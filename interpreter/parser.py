@@ -18,6 +18,30 @@ class Parser:
         self.pos += 1
         return token
 
+    @staticmethod
+    def _describe(token):
+        """Human-friendly name for a token in error messages."""
+        if token is None:
+            return "end of file"
+        names = {
+            'NEWLINE': 'end of line',
+            'DEDENT': 'end of block',
+            'INDENT': 'start of an indented block',
+            'EOF': 'end of file',
+        }
+        if token.value is not None:
+            return f"'{token.value}'"
+        return names.get(token.type, token.type)
+
+    @staticmethod
+    def _mark(node, token):
+        """Attach source position to a node (first marking wins)."""
+        if node is not None and getattr(node, 'line', None) is None \
+                and token is not None and token.line is not None:
+            node.line = token.line
+            node.column = token.column
+        return node
+
     def expect(self, token_type, suggestion=None):
         token = self.peek()
         if token is None or token.type != token_type:
@@ -35,7 +59,8 @@ class Parser:
             if self.peek().type == 'NEWLINE':
                 self.advance()
                 continue
-            stmt = self.parse_statement()
+            start = self.peek()
+            stmt = self._mark(self.parse_statement(), start)
             statements.append(stmt)
         return Program(statements)
 
@@ -53,9 +78,9 @@ class Parser:
                 return token.value
             return str(token.value).lower()
         raise ParserError(
-            f"I expected a {what} here but found '{token.value}'",
+            f"I expected a {what} here but found {self._describe(token)}",
             line=token.line, column=token.column,
-            suggestion=f"'{token.value}' is a reserved word — pick another {what}"
+            suggestion="pick a different " + what
         )
 
     def parse_statement(self):
@@ -779,43 +804,57 @@ class Parser:
         left = self.parse_term()
         comp_ops = ['IS_GREATER_THAN', 'IS_LESS_THAN', 'IS_EQUAL_TO',
                     'IS_GREATER_EQUAL', 'IS_LESS_EQUAL', 'IS_NOT', 'IS']
-        while self.peek() and self.peek().type in comp_ops:
-            op = self.advance().value
-            right = self.parse_term()
-            left = Comparison(left, op, right)
+        while True:
+            tok = self.peek()
+            if tok and tok.type in comp_ops:
+                op = self.advance().value
+                right = self.parse_term()
+                left = self._mark(Comparison(left, op, right), tok)
+            elif tok and tok.type == 'IN':
+                self.advance()
+                right = self.parse_term()
+                left = self._mark(Comparison(left, 'in', right), tok)
+            elif tok and tok.type == 'NOT' and self.peek(1) \
+                    and self.peek(1).type == 'IN':
+                op_tok = self.advance()  # not
+                self.advance()           # in
+                right = self.parse_term()
+                left = self._mark(Comparison(left, 'not in', right), op_tok)
+            else:
+                break
         return left
 
     # Correct precedence: or < and < comparison < term < factor < unary
     def parse_or(self):
         left = self.parse_and()
         while self.peek() and self.peek().type == 'OR':
-            op = self.advance().value
+            tok = self.advance()
             right = self.parse_and()
-            left = LogicalOp(left, op, right)
+            left = self._mark(LogicalOp(left, tok.value, right), tok)
         return left
 
     def parse_and(self):
         left = self.parse_comparison()
         while self.peek() and self.peek().type == 'AND':
-            op = self.advance().value
+            tok = self.advance()
             right = self.parse_comparison()
-            left = LogicalOp(left, op, right)
+            left = self._mark(LogicalOp(left, tok.value, right), tok)
         return left
 
     def parse_term(self):
         left = self.parse_factor()
         while self.peek() and self.peek().type in ('PLUS', 'MINUS'):
-            op = self.advance().value
+            tok = self.advance()
             right = self.parse_factor()
-            left = BinaryOp(left, op, right)
+            left = self._mark(BinaryOp(left, tok.value, right), tok)
         return left
 
     def parse_factor(self):
         left = self.parse_unary()
         while self.peek() and self.peek().type in ('MULT', 'DIV', 'MOD', 'POW'):
-            op = self.advance().value
+            tok = self.advance()
             right = self.parse_unary()
-            left = BinaryOp(left, op, right)
+            left = self._mark(BinaryOp(left, tok.value, right), tok)
         return left
 
     def parse_unary(self):
@@ -831,6 +870,7 @@ class Parser:
         return self.parse_postfix()
 
     def parse_postfix(self):
+        start = self.peek()
         expr = self.parse_primary()
         while True:
             tok = self.peek()
@@ -870,7 +910,7 @@ class Parser:
                 break
             else:
                 break
-        return expr
+        return self._mark(expr, start)
 
     def parse_input_call(self):
         """input("prompt") used as an expression."""
@@ -885,6 +925,11 @@ class Parser:
         return FuncCall('input', args)
 
     def parse_primary(self):
+        start = self.peek()
+        expr = self._primary_impl()
+        return self._mark(expr, start)
+
+    def _primary_impl(self):
         token = self.peek()
         if token is None:
             raise ParserError("Unexpected end of file")
@@ -947,7 +992,7 @@ class Parser:
             return self.parse_dict_literal()
 
         raise ParserError(
-            f"I expected a value here but found '{token.value}'",
+            f"I expected a value here but found {self._describe(token)}",
             line=token.line, column=token.column
         )
 

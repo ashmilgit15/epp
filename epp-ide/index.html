@@ -801,6 +801,7 @@ show_window
                 hasUnsavedChanges = true;
                 updateTitle();
                 clearErrorHighlights();
+                scheduleCheck();
             });
 
             editor.onDidChangeCursorPosition((e) => {
@@ -872,6 +873,39 @@ show_window
             const homePath = await window.eppAPI.getHomePath();
             currentProjectPath = homePath;
             loadFileTree(homePath);
+        }
+
+        // ── Live error squiggles (parse-only interpreter check) ──
+        let checkTimer = null;
+
+        function scheduleCheck() {
+            if (checkTimer) clearTimeout(checkTimer);
+            checkTimer = setTimeout(runCheck, 700);
+        }
+
+        async function runCheck() {
+            if (!window.eppAPI || !window.eppAPI.checkEpp) return;
+            if (!currentFilePath || !currentFilePath.endsWith('.epp')) return;
+            if (hasUnsavedChanges) await saveFile();
+
+            const res = await window.eppAPI.checkEpp(currentFilePath);
+            let markers = [];
+            if (res && res.success && res.result && !res.result.ok && res.result.errors) {
+                markers = res.result.errors.map(e => ({
+                    startLineNumber: Math.max(1, e.line),
+                    startColumn: Math.max(1, e.column),
+                    endLineNumber: Math.max(1, e.line),
+                    endColumn: 1000,
+                    message: e.message + (e.suggestion ? ' — ' + e.suggestion : ''),
+                    severity: monaco.MarkerSeverity.Error
+                }));
+            }
+            if (typeof monaco !== 'undefined' && editor) {
+                monaco.editor.setModelMarkers(editor.getModel(), 'epp', markers);
+            }
+            setStatus(markers.length
+                ? `${markers.length} issue${markers.length > 1 ? 's' : ''} found`
+                : 'No issues');
         }
 
         // ── Theme ─────────────────────────────────────────────
@@ -1109,6 +1143,7 @@ show_window
                     monaco.editor.setModelLanguage(editor.getModel(), 'plaintext');
                 }
                 setStatus('Opened: ' + filePath);
+                scheduleCheck();
             } else {
                 setStatus('Error: ' + result.error);
             }

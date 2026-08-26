@@ -6,6 +6,7 @@ The official IDE for the e++ programming language.
 
 - **Syntax Highlighting**: Full e++ language support with Monaco Editor
 - **Autocomplete & Hover Docs**: `Ctrl+Space` for every keyword, stdlib function and snippet; hover any function for its signature
+- **Live Error Squiggles**: The interpreter checks your file as you type (parse-only `--check` mode) and underlines problems with messages — before you even run
 - **File Explorer**: Create, edit, delete, and rename files
 - **Run & Debug**: Execute e++ programs with output panel — runtime errors automatically highlight the offending line
 - **Examples Gallery**: One-click runnable sample programs (games, GUI apps, canvas art, timers)

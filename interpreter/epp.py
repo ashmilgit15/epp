@@ -60,6 +60,91 @@ def run_source(source, evaluator):
     return evaluator.eval(program)
 
 
+def _supports_color():
+    return sys.stdout.isatty() and os.environ.get('NO_COLOR') is None
+
+
+def _fail(message):
+    if _supports_color():
+        print(f"\033[1;31m{message}\033[0m", file=sys.stderr)
+    else:
+        print(message, file=sys.stderr)
+    sys.exit(1)
+
+
+def check_file(filepath, as_json=False):
+    """Parse-only mode used by tools/IDE for live error reporting."""
+    with open(filepath, 'r') as f:
+        source = f.read()
+    try:
+        tokens = Lexer(source).tokenize()
+        Parser(tokens).parse()
+        if as_json:
+            print('{"ok": true}')
+        else:
+            print("No issues found.")
+        return 0
+    except EppError as e:
+        line = e.line if e.line is not None else -1
+        column = e.column if e.column is not None else -1
+        message = str(e.args[0]) if e.args else str(e)
+        suggestion = getattr(e, 'suggestion', None) or ''
+        if as_json:
+            import json
+            print(json.dumps({
+                "ok": False,
+                "errors": [{
+                    "line": line,
+                    "column": column,
+                    "message": message,
+                    "suggestion": suggestion,
+                }]
+            }))
+        else:
+            print(str(e))
+        return 1
+
+
+def dump_tokens(source):
+    tokens = Lexer(source).tokenize()
+    for t in tokens:
+        value = repr(t.value) if t.value is not None else ''
+        print(f"  {t.line:>4}:{t.column:<3} {t.type:<14} {value}")
+
+
+def dump_ast(source):
+    program = Parser(Lexer(source).tokenize()).parse()
+
+    def walk(node, depth=0):
+        name = type(node).__name__
+        pad = '  ' * depth
+        extra = ''
+        if isinstance(node, (Number, String, Boolean)):
+            extra = f' {node.value!r}'
+        elif isinstance(node, Identifier):
+            extra = f' {node.name}'
+        print(f"{pad}{name}{extra}")
+        for key, value in vars(node).items() if hasattr(node, '__dict__') else []:
+            child = getattr(node, key, None)
+            if isinstance(child, list):
+                for item in child:
+                    if hasattr(item, '__dict__') and not isinstance(item, token_type()):
+                        walk(item, depth + 1)
+                    elif isinstance(item, tuple):
+                        for part in item:
+                            if hasattr(part, '__dict__'):
+                                walk(part, depth + 1)
+            elif hasattr(child, '__dict__'):
+                walk(child, depth + 1)
+
+    walk(program)
+
+
+def token_type():
+    from interpreter.lexer import Token
+    return Token
+
+
 def run_file(filepath):
     with open(filepath, 'r') as f:
         source = f.read()
@@ -67,8 +152,7 @@ def run_file(filepath):
     try:
         run_source(source, evaluator)
     except EppError as e:
-        print(str(e), file=sys.stderr)
-        sys.exit(1)
+        _fail(str(e))
     except KeyboardInterrupt:
         print("\n(interrupted)", file=sys.stderr)
         sys.exit(130)
@@ -139,6 +223,34 @@ def main():
         repl()
         return
 
+    if args[0] in ('--version', '-v'):
+        from interpreter import __version__
+        print(f"E++ v{__version__}")
+        return
+
+    if args[0] == '--check':
+        if len(args) < 2:
+            print("Usage: epp --check <file.epp> [--json]", file=sys.stderr)
+            sys.exit(2)
+        as_json = '--json' in args[2:]
+        sys.exit(check_file(args[1], as_json=as_json))
+
+    if args[0] == '--tokens':
+        if len(args) < 2:
+            print("Usage: epp --tokens <file.epp>", file=sys.stderr)
+            sys.exit(2)
+        with open(args[1]) as f:
+            dump_tokens(f.read())
+        return
+
+    if args[0] == '--ast':
+        if len(args) < 2:
+            print("Usage: epp --ast <file.epp>", file=sys.stderr)
+            sys.exit(2)
+        with open(args[1]) as f:
+            dump_ast(f.read())
+        return
+
     if args[0] == '-e':
         if len(args) < 2:
             print("Usage: epp -e \"<code>\"", file=sys.stderr)
@@ -147,22 +259,14 @@ def main():
         try:
             run_source(args[1], evaluator)
         except EppError as e:
-            print(str(e), file=sys.stderr)
-            sys.exit(1)
-        return
-
-    if args[0] in ('--version', '-v'):
-        from interpreter import __version__
-        print(f"E++ v{__version__}")
+            _fail(str(e))
         return
 
     filepath = args[0]
     if not filepath.endswith('.epp'):
-        print("Error: e++ files should end with .epp", file=sys.stderr)
-        sys.exit(1)
+        _fail("Error: e++ files should end with .epp")
     if not os.path.exists(filepath):
-        print(f"Error: File '{filepath}' not found", file=sys.stderr)
-        sys.exit(1)
+        _fail(f"Error: File '{filepath}' not found")
     run_file(filepath)
 
 

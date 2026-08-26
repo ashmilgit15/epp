@@ -40,6 +40,11 @@ python3 -m interpreter.epp -e 'say "quick math: {2 ^ 10}"'
 
 # Start an interactive REPL — just type e++!
 python3 -m interpreter.epp
+
+# Developer tools
+python3 -m interpreter.epp --check file.epp    # syntax check (used by the IDE)
+python3 -m interpreter.epp --tokens file.epp   # show tokens
+python3 -m interpreter.epp --ast file.epp      # show syntax tree
 ```
 
 REPL commands: `help`, `vars`, `clear`, `exit`.
@@ -67,10 +72,19 @@ score += 5    # also -= *= /= %=
 say "Hello!"
 say "Hi {name}, next year you'll be {age + 1}!"
 ```
-Anything inside `{...}` is evaluated. Use single quotes for strings inside `{}`:
+Anything inside `{...}` is evaluated — and you can format the result after a colon:
 ```epp
+pi = 3.14159
 user = {"name": "Zoe"}
-say "Hi {user['name']}!"
+say "Hi {user['name']}! pi ≈ {pi:.2f}, id: {42:05d}"
+```
+
+### Membership: `in` / `not in`
+```epp
+fruits = ["apple", "banana"]
+if "apple" in fruits:
+    say "yes!"
+say "kiwi" not in fruits     # true
 ```
 
 ### 4. Getting User Input

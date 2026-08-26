@@ -155,6 +155,40 @@ ipcMain.handle('delete-file', async (event, filePath) => {
     }
 });
 
+ipcMain.handle('check-epp', async (event, filePath) => {
+    return new Promise((resolve) => {
+        const runner = resolveRunner();
+        const child = spawn(runner.command,
+            [...(runner.args || []), '--check', filePath, '--json'],
+            { cwd: runner.cwd || path.dirname(filePath) });
+
+        let out = '';
+        let err = '';
+        const timeout = setTimeout(() => {
+            child.kill();
+            resolve({ success: false, error: 'Check timed out' });
+        }, 10000);
+
+        child.stdout.on('data', (d) => { out += d.toString(); });
+        child.stderr.on('data', (d) => { err += d.toString(); });
+        child.on('close', () => {
+            clearTimeout(timeout);
+            try {
+                // The interpreter may print unrelated warnings; find the JSON line
+                const jsonLine = out.split('\n').reverse().find(l => l.trim().startsWith('{'));
+                if (!jsonLine) throw new Error(err || 'No output from checker');
+                resolve({ success: true, result: JSON.parse(jsonLine) });
+            } catch (e) {
+                resolve({ success: false, error: e.message });
+            }
+        });
+        child.on('error', (err2) => {
+            clearTimeout(timeout);
+            resolve({ success: false, error: err2.message });
+        });
+    });
+});
+
 ipcMain.handle('run-epp', async (event, filePath) => {
     return new Promise((resolve) => {
         const output = [];

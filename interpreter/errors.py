@@ -8,7 +8,10 @@ class EppError(Exception):
     def __str__(self):
         msg = super().__str__()
         if self.line is not None:
-            msg = f"Error at line {self.line}: {msg}"
+            if self.column is not None:
+                msg = f"Error at line {self.line}, column {self.column}: {msg}"
+            else:
+                msg = f"Error at line {self.line}: {msg}"
         if self.suggestion:
             msg += f" — {self.suggestion}"
         return msg
