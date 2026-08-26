@@ -12,7 +12,6 @@ keywords = ["programming-language", "interpreter", "beginner", "education", "gui
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Education",
-    "Intended Audience :: Beginners",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
