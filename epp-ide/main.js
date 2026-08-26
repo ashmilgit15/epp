@@ -274,7 +274,7 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
 // Configuration (env vars or a config.json next to this file):
 //   EPP_AI_BASE_URL  default: https://ai.hackclub.com/proxy/v1 (Hack Club AI)
 //   EPP_AI_API_KEY   your provider API key (NEVER commit this!)
-//   EPP_AI_MODEL     default: stealth/ox-alpha
+//   EPP_AI_MODEL     default: google/gemini-3.7-flash
 function getAiConfig() {
     let fileConfig = {};
     try {
@@ -290,7 +290,7 @@ function getAiConfig() {
             || 'https://ai.hackclub.com/proxy/v1',
         apiKey: process.env.EPP_AI_API_KEY || fileConfig.apiKey || '',
         model: process.env.EPP_AI_MODEL || fileConfig.model
-            || 'stealth/ox-alpha'
+            || 'google/gemini-3.7-flash'
     };
 }
 
