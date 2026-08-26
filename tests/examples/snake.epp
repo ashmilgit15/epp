@@ -1,0 +1,86 @@
+# Snake — the classic game, in ~60 lines of e++
+# Controls: arrow keys (or WASD). Eat the red food, don't hit walls or yourself!
+
+window "Snake" width 440 height 480 color "#0d0d1a" on_key handle_key
+canvas "cv" width 400 height 400 color "#111122"
+
+label "Arrow keys / WASD to move" at 20 405 font_size 12 color "#888888"
+label "" at 20 430 font_size 16 color "lime" id "score_lbl"
+
+cell = 20
+grid = 20
+
+snake = [[10, 10], [9, 10], [8, 10]]
+dir_x = 1
+dir_y = 0
+score = 0
+food = [15, 10]
+
+func random_food():
+    fx = random_int(0, grid - 1)
+    fy = random_int(0, grid - 1)
+    food[0] = fx
+    food[1] = fy
+
+func handle_key(key):
+    if key == "Left" or key == "a":
+        if dir_x != 1:
+            dir_x = -1
+            dir_y = 0
+    elif key == "Right" or key == "d":
+        if dir_x != -1:
+            dir_x = 1
+            dir_y = 0
+    elif key == "Up" or key == "w":
+        if dir_y != 1:
+            dir_x = 0
+            dir_y = -1
+    elif key == "Down" or key == "s":
+        if dir_y != -1:
+            dir_x = 0
+            dir_y = 1
+
+func draw_cell(cx, cy, col):
+    px = cx * cell
+    py = cy * cell
+    draw rectangle on "cv" from px + 1 py + 1 to px + cell - 1 py + cell - 1 color col fill col
+
+func game_over():
+    set_text "score_lbl" to "GAME OVER! Score: {score}"
+    beep 220 400
+
+func tick():
+    clear_canvas "cv"
+    hx = snake[0][0] + dir_x
+    hy = snake[0][1] + dir_y
+
+    if hx < 0 or hx >= grid or hy < 0 or hy >= grid:
+        game_over()
+        return
+    for part in snake:
+        if part[0] == hx and part[1] == hy:
+            game_over()
+            return
+
+    snake.unshift([hx, hy])
+
+    if hx == food[0] and hy == food[1]:
+        score += 1
+        set_text "score_lbl" to "Score: {score}"
+        beep 880 30
+        random_food()
+    else:
+        snake.pop()
+
+    # ── draw everything ──
+    draw_cell(food[0], food[1], "#ff5555")
+    first = true
+    for part in snake:
+        if first:
+            draw_cell(part[0], part[1], "#00e676")
+            first = false
+        else:
+            draw_cell(part[0], part[1], "#00994d")
+
+every 120 milliseconds call tick
+show_window

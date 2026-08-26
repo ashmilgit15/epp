@@ -221,6 +221,7 @@ class Parser:
         color = None
         resizable = True
         widget_id = None
+        on_key = None
         while not self._at_end_of_line():
             t = self.peek().type
             if t == 'WIDTH':
@@ -234,9 +235,11 @@ class Parser:
                 resizable = self.parse_expression()
             elif t == 'ID':
                 self.advance(); widget_id = self.parse_expression()
+            elif t == 'ON_KEY':
+                self.advance(); on_key = self.parse_name("function name after on_key")
             else:
                 break
-        return WindowStmt(title, width, height, color, resizable, widget_id)
+        return WindowStmt(title, width, height, color, resizable, widget_id, on_key)
 
     def parse_label(self):
         self.advance()  # consume LABEL
@@ -408,7 +411,7 @@ class Parser:
         widget_id = self.parse_primary()
         if isinstance(widget_id, Identifier):
             widget_id = String(widget_id.name)
-        width = 300; height = 300; color = None
+        width = 300; height = 300; color = None; on_key = None
         while not self._at_end_of_line():
             t = self.peek().type
             if t == 'WIDTH':
@@ -417,9 +420,11 @@ class Parser:
                 self.advance(); height = self.parse_expression()
             elif t == 'COLOR':
                 self.advance(); color = self.parse_expression()
+            elif t == 'ON_KEY':
+                self.advance(); on_key = self.parse_name("function name after on_key")
             else:
                 break
-        return CanvasStmt(widget_id, width, height, color)
+        return CanvasStmt(widget_id, width, height, color, on_key)
 
     def _parse_draw_options(self):
         color = None; fill = None; outline_width = None; text = None

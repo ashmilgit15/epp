@@ -177,14 +177,16 @@ class IndexAssignment(Node):
 # ── GUI Nodes ──────────────────────────────────────────────────────────────────
 
 class WindowStmt(Node):
-    """window "Title" width W height H [color "bg"] [id "name"]"""
-    def __init__(self, title, width, height, color=None, resizable=True, widget_id=None):
+    """window "Title" width W height H [color "bg"] [id "name"] [on_key fn]"""
+    def __init__(self, title, width, height, color=None, resizable=True,
+                 widget_id=None, on_key=None):
         self.title   = title
         self.width   = width
         self.height  = height
         self.color   = color
         self.resizable = resizable
         self.widget_id = widget_id
+        self.on_key  = on_key
 
 class LabelStmt(Node):
     """label "text" at X Y [font_size N] [color "c"] [id "name"]"""
@@ -293,12 +295,13 @@ class SetVisibleStmt(Node):
 # ── Creative/Canvas Nodes ─────────────────────────────────────────────────────
 
 class CanvasStmt(Node):
-    """canvas "id" width W height H [color "bg"]"""
-    def __init__(self, widget_id, width, height, color=None):
+    """canvas "id" width W height H [color "bg"] [on_key fn]"""
+    def __init__(self, widget_id, width, height, color=None, on_key=None):
         self.widget_id = widget_id
         self.width  = width
         self.height = height
         self.color  = color
+        self.on_key = on_key
 
 class DrawStmt(Node):
     """draw shape on "canvas_id" with x1 y1 x2 y2 ... [color "c"] [width N] [fill "c"]"""

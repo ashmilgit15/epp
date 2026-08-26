@@ -463,6 +463,12 @@ class Evaluator:
         if method == 'push':
             lst.append(args[0] if args else None)
             return None
+        elif method == 'insert' or method == 'unshift':
+            if method == 'unshift' or len(args) == 1:
+                lst.insert(0, args[0] if args else None)
+            else:
+                lst.insert(int(args[0]), args[1])
+            return None
         elif method == 'pop':
             if lst:
                 return lst.pop()
@@ -849,6 +855,10 @@ class Evaluator:
         if not isinstance(resizable, bool):
             resizable = self.is_truthy(self.eval(resizable))
         root.resizable(resizable, resizable)
+        if node.on_key:
+            root.bind('<KeyPress>',
+                      lambda ev: self.fire_handler(node.on_key, ev.keysym))
+            root.focus_set()
         if node.widget_id:
             self._register_widget(str(self.eval(node.widget_id)), root)
         return None
@@ -1100,6 +1110,10 @@ class Evaluator:
                            highlightthickness=0)
         canvas.place(x=20, y=20)
         self._register_widget(wid, canvas)
+        if node.on_key:
+            root.bind('<KeyPress>',
+                      lambda ev: self.fire_handler(node.on_key, ev.keysym))
+            canvas.focus_set()
         return None
 
     def eval_DrawStmt(self, node):

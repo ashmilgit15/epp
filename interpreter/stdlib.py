@@ -51,6 +51,16 @@ def make_stdlib(evaluator):
         lst.append(item)
         return None
 
+    def epp_insert(args):
+        lst = args[0] if args else None
+        if not isinstance(lst, list):
+            raise EvalError("'insert' requires a list")
+        if len(args) < 3:
+            raise EvalError("'insert' needs (list, index, item)")
+        index = int(args[1])
+        lst.insert(index, args[2])
+        return None
+
     def epp_pop(args):
         lst = args[0] if args else None
         if not isinstance(lst, list):
@@ -353,6 +363,7 @@ def make_stdlib(evaluator):
         # Collections
         'range': lambda ev, args: epp_range(args),
         'push': lambda ev, args: epp_push(args),
+        'insert': lambda ev, args: epp_insert(args),
         'pop': lambda ev, args: epp_pop(args),
         'keys': lambda ev, args: epp_keys(args),
         'values': lambda ev, args: epp_values(args),

@@ -10,7 +10,7 @@ KEYWORDS = {
     'window', 'label', 'button', 'input', 'image', 'textbox',
     'checkbox', 'dropdown', 'options',
     'at', 'width', 'height', 'color', 'font_size', 'id',
-    'on_click', 'on_change', 'placeholder', 'password',
+    'on_click', 'on_change', 'on_key', 'placeholder', 'password',
     'set_text', 'to', 'get_text', 'show_window',
     'alert', 'set_color', 'set_visible', 'resizable',
     'text',
@@ -27,7 +27,7 @@ KEYWORDS = {
 SOFT_KEYWORD_TYPES = {
     'AT', 'WIDTH', 'HEIGHT', 'COLOR', 'FONT_SIZE', 'ID', 'OPTIONS',
     'PLACEHOLDER', 'PASSWORD', 'TEXT', 'RESIZABLE', 'TO', 'ON_CLICK',
-    'ON_CHANGE',
+    'ON_CHANGE', 'ON_KEY',
     'CANVAS', 'DRAW', 'ON', 'WITH', 'CLEAR_CANVAS', 'SLIDER',
     'PROGRESS', 'SET_PROGRESS', 'EVERY', 'AFTER', 'CALL', 'MILLIS',
     'SECONDS', 'BEEP', 'FILL', 'FROM', 'SIZE',

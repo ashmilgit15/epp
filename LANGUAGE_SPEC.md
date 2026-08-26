@@ -229,7 +229,7 @@ func square(x):
 ```
 
 ### Calling Functions
-Parentheses are the normal style. Functions whose first argument is a string can also be called with a bare string shorthand:
+Parentheses are the normal style. Functions whose first argument is a string also support a bare shorthand:
 ```epp
 greet("World")
 result = add(5, 3)
@@ -248,7 +248,7 @@ write_file "out.txt", "hello there"    # extra args follow a comma
 - `type(x)` · `str(x)` · `int(x)` · `float(x)` · `bool(x)`
 
 **Collections:**
-- `len(x)` · `range(n)` / `range(start, stop, step)` · `push(list, item)` · `pop(list)`
+- `len(x)` · `range(n)` / `range(start, stop, step)` · `push(list, item)` · `insert(list, index, item)` · `pop(list)`
 - `contains(container, item)` · `index_of(list, item)`
 - `sort(list)` (returns sorted copy) · `reversed(list_or_string)` · `sum(numbers)` · `slice(seq, start, end)`
 - `keys(dict)` · `values(dict)`
@@ -275,7 +275,7 @@ write_file "out.txt", "hello there"    # extra args follow a comma
 ### Built-in Methods on Values
 ```epp
 nums = [3, 1, 2]
-nums.push(4)          nums.pop()      nums.len()
+nums.push(4)          nums.insert(0, x)   nums.unshift(x)   nums.pop()   nums.len()
 nums.contains(1)      nums.index_of(2)  nums.first()  nums.last()
 nums.sort()           nums.reverse()
 
@@ -366,7 +366,7 @@ Widget reference:
 
 | Statement | Parameters |
 |-----------|-----------|
-| `window` | `"Title"` `width` `height` `[color]` `[resizable]` `[id]` |
+| `window` | `"Title"` `width` `height` `[color]` `[resizable]` `[id]` `[on_key fn]` |
 | `label` | `"text"` `at X Y` `[font_size N]` `[color]` `[id]` |
 | `button` | `"text"` `at X Y` `[width]` `[height]` `[on_click fn]` `[color]` `[id]` |
 | `input` | `"id"` `at X Y` `[width]` `[placeholder "..."]` `[password]` |
@@ -375,8 +375,7 @@ Widget reference:
 | `checkbox` | `"id"` `[text "..."]` `at X Y` `[on_change fn]` |
 | `dropdown` | `"id"` `options [...]` `at X Y` `[on_change fn]` |
 | `slider` | `"id"` `[from A]` `[to B]` `at X Y` `[on_change fn]` |
-| `progress` | `"id"` `at X Y` `[width W]` |
-
+| `canvas` | `"id"` `[width W]` `[height H]` `[color "bg"]` `[on_key fn]` |
 Commands: `set_text "id" to v` · `v = get_text "id"` · `set_color "id" to "red"` · `set_visible "id" false` · `set_progress "id" to 50` · `alert "msg"` · `beep [freq] [ms]` · `show_window`
 
 ## Canvas Drawing & Animation

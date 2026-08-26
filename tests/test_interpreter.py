@@ -722,6 +722,47 @@ class TestRound2Features(unittest.TestCase):
         finally:
             os.unlink(path)
 
+
+    def test_string_shorthand_call(self):
+        source = (
+            'write_file "/tmp/epp_sh.txt", "hi"\n'
+            'r = read_file "/tmp/epp_sh.txt"'
+        )
+        ev = evaluate(source)
+        self.assertEqual(ev.global_scope['r'], 'hi')
+
+    def test_paren_calls_with_variables(self):
+        source = (
+            'func double(n):\n'
+            '    return n * 2\n'
+            'x = 21\n'
+            'r = double(x)'
+        )
+        ev = evaluate(source)
+        self.assertEqual(ev.global_scope['r'], 42)
+
+    def test_minus_stays_subtraction_not_arg(self):
+        ev = evaluate('total = 10\nr = total - 1')
+        self.assertEqual(ev.global_scope['r'], 9)
+
+    def test_list_insert_and_unshift(self):
+        source = (
+            'l = [2, 3]\n'
+            'insert(l, 0, 1)\n'
+            'l.unshift(0)\n'
+            'l.insert(2, 1.5)'
+        )
+        ev = evaluate(source)
+        self.assertEqual(ev.global_scope['l'], [0, 1, 1.5, 2, 3])
+
+    def test_on_key_parses_on_window_and_canvas(self):
+        program = parse(
+            'window "G" width 100 height 100 on_key handle\n'
+            'canvas "cv" width 50 height 50 color "black" on_key handle'
+        )
+        self.assertEqual(program.statements[0].on_key, 'handle')
+        self.assertEqual(program.statements[1].on_key, 'handle')
+
     def test_version_flag(self):
         import subprocess
         base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

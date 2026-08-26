@@ -155,9 +155,8 @@ switch day:
 func add(a, b):
     return a + b
 
-result = add(5, 3)          # parentheses style...
-total = add 5, 3            # not supported — use parens!
-read_file "notes.txt"       # ...but string-first functions have shorthand
+result = add(5, 3)          # parentheses style
+read_file "notes.txt"       # string-first functions have shorthand
 write_file "out.txt", "hi"  # extra args after a comma
 ```
 
@@ -215,6 +214,24 @@ import "utils.epp"
 Files are resolved relative to the importing file; each file runs once; circular imports fail with a friendly message.
 
 ---
+
+## Keyboard Games
+
+```epp
+window "Game" width 440 height 480 color "#0d0d1a" on_key handle_key
+canvas "cv" width 400 height 400 color "#111122"
+
+func handle_key(key):
+    if key == "Left" or key == "a":
+        move_left()
+    elif key == "Right" or key == "d":
+        move_right()
+
+every 120 milliseconds call tick
+show_window
+```
+Key names: `"Left"` `"Right"` `"Up"` `"Down"`, letter keys like `"a"`, and `"space"`.
+See the complete Snake game in `tests/examples/snake.epp`!
 
 ## GUI Apps
 

@@ -10,6 +10,7 @@ E++ is a beginner-friendly, English-like programming language with a built-in Py
 - **Membership tests:** `if "apple" in fruits:` / `if user not in banned:`
 - **Native GUI Framework:** Build desktop apps with zero boilerplate: `window`, `label`, `button`, `input`, `slider`, `progress`, `dropdown`, `checkbox`, `textbox`, `image`
 - **Canvas & Animation:** `canvas` + `draw circle on "cv" at 100 100 size 40 color "red"` + `every 50 milliseconds call tick` — games and art made simple
+- **Keyboard input:** `window ... on_key handle` turns key presses into function calls — full Snake game included in [tests/examples/snake.epp](tests/examples/snake.epp)
 - **Modern Language Core:** indexing (`items[0]`, `items[-1]`, chained), dicts, classes with method arguments, `try/catch`, `switch`, `repeat N times:`, `break`/`continue`, compound assignment (`+=`)
 - **Standard Library:** 50+ built-ins including JSON, files, math, randomness, and native `fetch`/`fetch_json` for networking
 - **Friendly Errors:** Line **and column** numbers + plain-English suggestions ("Did you forget to assign it?") — plus `--check`, `--tokens` and `--ast` CLI tools
@@ -48,6 +49,16 @@ func twinkle():
 
 show_window
 ```
+
+### Installing
+
+From PyPI:
+```bash
+pip install epp-lang
+epp my_script.epp        # or just: epp   (REPL)
+```
+
+Or straight from the repo:
 
 ### Running E++ Code
 
