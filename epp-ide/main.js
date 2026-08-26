@@ -269,12 +269,12 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
     return dialog.showOpenDialog(mainWindow, options);
 });
 
-// AI Chat Integration (Streaming) — OpenAI-compatible endpoint.
+// AI Chat Integration (Streaming) — any OpenAI-compatible endpoint.
 //
 // Configuration (env vars or a config.json next to this file):
-//   EPP_AI_BASE_URL  e.g. https://integrate.api.nvidia.com/v1
+//   EPP_AI_BASE_URL  default: https://ai.hackclub.com/proxy/v1 (Hack Club AI)
 //   EPP_AI_API_KEY   your provider API key (NEVER commit this!)
-//   EPP_AI_MODEL     e.g. meta/llama-3.1-405b-instruct
+//   EPP_AI_MODEL     default: stealth/ox-alpha
 function getAiConfig() {
     let fileConfig = {};
     try {
@@ -287,19 +287,30 @@ function getAiConfig() {
     }
     return {
         baseUrl: process.env.EPP_AI_BASE_URL || fileConfig.baseUrl
-            || 'https://integrate.api.nvidia.com/v1',
+            || 'https://ai.hackclub.com/proxy/v1',
         apiKey: process.env.EPP_AI_API_KEY || fileConfig.apiKey || '',
         model: process.env.EPP_AI_MODEL || fileConfig.model
-            || 'meta/llama-3.1-405b-instruct'
+            || 'stealth/ox-alpha'
     };
 }
+
+let activeAiRequest = null;  // AbortController for the in-flight completion
+
+ipcMain.handle('stop-ai', async () => {
+    if (activeAiRequest) {
+        activeAiRequest.abort();
+        activeAiRequest = null;
+        return { success: true };
+    }
+    return { success: false, error: 'No AI request running' };
+});
 
 ipcMain.handle('get-ai-status', async () => {
     const cfg = getAiConfig();
     return { configured: Boolean(cfg.apiKey), baseUrl: cfg.baseUrl, model: cfg.model };
 });
 
-ipcMain.handle('chat-with-ai', async (event, messages) => {
+ipcMain.handle('chat-with-ai', async (event, messages, editorContext) => {
     try {
         // Construct the system prompt for e++
         const systemPrompt = {
@@ -364,6 +375,17 @@ switch day:
 - \`set_text "id" to value\` · \`value = get_text "id"\` · \`set_color "id" to "red"\`
 - \`set_visible "id" false\` · \`alert "msg"\` · \`show_window\` · \`beep\` or \`beep 880 150\`
 
+### TESTING (built into the language):
+\`\`\`epp
+test "addition":
+    expect add(2, 2) to_be 4
+    expect 1 / 0 to_throw
+\`\`\`
+Matchers: \`to_be\`, \`to_be_true\`, \`to_be_false\`, \`to_throw\`.
+
+### KEYBOARD:
+\`window ... on_key handle\` — handler receives the key name (\`"Left"\`, \`"Right"\`, \`"Up"\`, \`"Down"\`, \`"a"\`, \`"space"\`...). Also available on canvas, input, textbox and button.
+
 ### CRITICAL RULES:
 1. ALWAYS output full, complete files wrapped in markdown \`\`\`epp blocks.
 Example:
@@ -382,17 +404,30 @@ DO NOT output raw code as plain text — use markdown blocks so the IDE auto-app
 4. Prefer string interpolation \`"{x}"\` over concatenation for readability.`
         };
 
-        const apiMessages = [systemPrompt, ...messages];
-
         const cfg = getAiConfig();
         if (!cfg.apiKey) {
             return {
                 success: false,
                 error: 'No AI API key configured. Set the EPP_AI_API_KEY environment variable '
                     + 'or create epp-ide/config.json with {"apiKey": "...", "baseUrl": "...", "model": "..."}. '
-                    + 'Any OpenAI-compatible provider works (Nvidia NIM, OpenAI, Groq, Ollama...).'
+                    + 'Any OpenAI-compatible provider works. '
+                    + 'For Hack Club AI, use https://ai.hackclub.com/proxy/v1 with your sk-hc-... key.'
             };
         }
+
+        // Keep history bounded; inject editor context as a preceding user message
+        const trimmedHistory = Array.isArray(messages) ? messages.slice(-12) : [];
+        const contextMessages = [];
+        if (typeof editorContext === 'string' && editorContext.trim().length > 0) {
+            const clipped = editorContext.slice(0, 6000);
+            contextMessages.push({
+                role: "user",
+                content: `Current editor content (for context — don't repeat unless asked to edit it):\n\`\`\`epp\n${clipped}\n\`\`\``
+            });
+        }
+        const apiMessages = [systemPrompt, ...contextMessages, ...trimmedHistory];
+
+        activeAiRequest = new AbortController();
 
         const response = await net.fetch(cfg.baseUrl.replace(/\/$/, '') + "/chat/completions", {
             method: "POST",
@@ -405,14 +440,16 @@ DO NOT output raw code as plain text — use markdown blocks so the IDE auto-app
                 messages: apiMessages,
                 temperature: 0.2,
                 top_p: 0.7,
-                max_tokens: 1024,
+                max_tokens: 2048,
                 stream: true
-            })
+            }),
+            signal: activeAiRequest.signal
         });
 
         if (!response.ok) {
             const errBody = await response.text();
-            throw new Error(`Nvidia API error: ${response.status} - ${errBody}`);
+            activeAiRequest = null;
+            throw new Error(`AI API error ${response.status}: ${errBody.slice(0, 400)}`);
         }
 
         let fullContent = "";
@@ -421,32 +458,46 @@ DO NOT output raw code as plain text — use markdown blocks so the IDE auto-app
         // Use an async iterator to read chunks
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8");
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            sseBuffer += decoder.decode(value, { stream: true });
-            const lines = sseBuffer.split('\n');
-            sseBuffer = lines.pop();  // keep the (possibly) partial last line
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
-                    try {
-                        const data = JSON.parse(trimmed.substring(6));
-                        if (data.choices && data.choices[0] && data.choices[0].delta
-                                && data.choices[0].delta.content) {
-                            const text = data.choices[0].delta.content;
-                            fullContent += text;
-                            event.sender.send('ai-stream-chunk', text);
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                sseBuffer += decoder.decode(value, { stream: true });
+                const lines = sseBuffer.split('\n');
+                sseBuffer = lines.pop();  // keep the (possibly) partial last line
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
+                        try {
+                            const data = JSON.parse(trimmed.substring(6));
+                            if (data.choices && data.choices[0] && data.choices[0].delta
+                                    && data.choices[0].delta.content) {
+                                const text = data.choices[0].delta.content;
+                                fullContent += text;
+                                event.sender.send('ai-stream-chunk', text);
+                            }
+                        } catch (e) {
+                            // ignore malformed events
                         }
-                    } catch (e) {
-                        // ignore malformed events
                     }
                 }
             }
+        } catch (readError) {
+            // Aborted via stop-ai → return what we have so far
+            if (readError.name === 'AbortError' || (activeAiRequest && activeAiRequest.signal.aborted)) {
+                activeAiRequest = null;
+                return { success: true, reply: fullContent, aborted: true };
+            }
+            throw readError;
         }
+        activeAiRequest = null;
         
         return { success: true, reply: fullContent };
     } catch (error) {
+        activeAiRequest = null;
+        if (error.name === 'AbortError') {
+            return { success: false, error: 'aborted' };
+        }
         return { success: false, error: error.message };
     }
 });

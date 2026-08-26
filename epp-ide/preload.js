@@ -18,7 +18,8 @@ contextBridge.exposeInMainWorld('eppAPI', {
     pathDirname: (filePath) => ipcRenderer.invoke('path-dirname', filePath),
     showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
     showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options),
-    chatWithAI: (messages) => ipcRenderer.invoke('chat-with-ai', messages),
+    chatWithAI: (messages, editorContext) => ipcRenderer.invoke('chat-with-ai', messages, editorContext),
+    stopAi: () => ipcRenderer.invoke('stop-ai'),
     getAiStatus: () => ipcRenderer.invoke('get-ai-status'),
     onAiStreamChunk: (callback) => ipcRenderer.on('ai-stream-chunk', (event, chunk) => callback(chunk))
 });

@@ -242,6 +242,10 @@
             padding: 8px 12px; margin-left: 5px; border-radius: 3px; cursor: pointer;
         }
         .ai-submit:hover { filter: brightness(1.15); }
+        .ai-submit.stop { background-color: #c42b1c; }
+        .ai-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px 0; }
+        .ai-chip { background: var(--bg-toolbar); border: 1px solid var(--border); color: var(--text-dim); font-size: 11px; padding: 4px 8px; border-radius: 12px; cursor: pointer; }
+        .ai-chip:hover { border-color: var(--statusbar); color: var(--text); }
         .loader {
             border: 3px solid var(--border); border-top: 3px solid var(--statusbar);
             border-radius: 50%; width: 14px; height: 14px;
@@ -299,8 +303,15 @@
                 <div class="ai-messages" id="ai-messages">
                     <div class="ai-message assistant">Hello! I am your E++ AI coding assistant. I can generate complete E++ programs — console apps, GUI apps and canvas games. Ask away!</div>
                 </div>
+                <div class="ai-chips" id="ai-chips">
+                    <button class="ai-chip" data-prompt="Explain what this code does, step by step:">✨ Explain</button>
+                    <button class="ai-chip" data-prompt="Find and fix bugs in this code. Explain the fixes:">🐞 Fix bugs</button>
+                    <button class="ai-chip" data-prompt="Add clear comments to this code without changing logic:">💬 Comments</button>
+                    <button class="ai-chip" data-prompt="Write test blocks (using to_be / to_throw) for this code:">🧪 Tests</button>
+                    <button class="ai-chip" data-prompt="Create a fun, complete game in E++ (with window, canvas, on_key and timers). Make it playable:">🎮 Game</button>
+                </div>
                 <div class="ai-input-container">
-                    <textarea class="ai-input" id="ai-input" placeholder="Ask me to write e++ code or build an app...&#10;(Tip: configure EPP_AI_API_KEY to enable me)"></textarea>
+                    <textarea class="ai-input" id="ai-input" placeholder="Ask me to write e++ code or build an app...&#10;(Context: your current editor code is sent automatically)"></textarea>
                     <button class="ai-submit" id="ai-submit">Send</button>
                 </div>
             </div>
@@ -1494,22 +1505,49 @@ show_window
             }
         }
 
-        async function sendAiMessage() {
-            const text = aiInput.value.trim();
-            if (!text) return;
+        let aiGenerating = false;
+
+        function setAiGenerating(active) {
+            aiGenerating = active;
+            if (active) {
+                aiSubmit.textContent = 'Stop';
+                aiSubmit.classList.add('stop');
+                aiSubmit.disabled = false;
+            } else {
+                aiSubmit.textContent = 'Send';
+                aiSubmit.classList.remove('stop');
+                aiSubmit.disabled = aiInput.value.trim().length === 0 ? false : false;
+            }
+        }
+
+        async function sendAiMessage(prefilledText) {
+            const rawText = typeof prefilledText === 'string' ? prefilledText : aiInput.value.trim();
+            if (!rawText) return;
 
             if (!aiConfigured) {
                 appendMessage('assistant',
                     'I need an API key before I can think! Set the **EPP_AI_API_KEY** environment variable ' +
-                    '(any OpenAI-compatible provider works), or create `epp-ide/config.json`:\n' +
-                    '```\n{ "apiKey": "...", "baseUrl": "...", "model": "..." }\n```');
+                    '(any OpenAI-compatible provider works — Hack Club AI at https://ai.hackclub.com/proxy/v1), '
+                    + 'or create `epp-ide/config.json`:\n' +
+                    '```\n{ "apiKey": "sk-hc-...", "baseUrl": "https://ai.hackclub.com/proxy/v1", "model": "stealth/ox-alpha" }\n```');
                 return;
             }
 
+            // Stop generation if already running
+            if (aiGenerating) {
+                try { await window.eppAPI.stopAi(); } catch (e) {}
+                appendMessage('assistant', '⏹ Stopped.');
+                setAiGenerating(false);
+                aiInput.disabled = false;
+                aiInput.focus();
+                return;
+            }
+
+            const text = rawText;
             aiInput.value = '';
             aiInput.disabled = true;
-            aiSubmit.disabled = true;
-            aiSubmit.innerHTML = 'Wait<div class="loader"></div>';
+            setAiGenerating(true);
+            aiSubmit.innerHTML = 'Stop';
 
             appendMessage('user', text);
             chatHistory.push({ role: 'user', content: text });
@@ -1518,28 +1556,63 @@ show_window
             currentFullText = "";
 
             try {
-                const response = await window.eppAPI.chatWithAI(chatHistory);
+                const editorContext = (typeof editor !== 'undefined' && editor) ? editor.getValue() : '';
+                const response = await window.eppAPI.chatWithAI(chatHistory, editorContext);
                 if (response.success) {
-                    finishAiStream(response.reply);
-                    chatHistory.push({ role: 'assistant', content: response.reply });
+                    if (response.aborted) {
+                        appendMessage('assistant', '⏹ Stopped.');
+                    } else {
+                        finishAiStream(response.reply);
+                        chatHistory.push({ role: 'assistant', content: response.reply });
+                    }
                 } else {
-                    appendMessage('assistant', 'Error connecting to AI: ' + response.error);
+                    if (response.error === 'aborted') {
+                        appendMessage('assistant', '⏹ Stopped.');
+                    } else {
+                        appendMessage('assistant', 'Error connecting to AI: ' + response.error
+                            + '\n\nTip: if using Hack Club AI, double-check the key in epp-ide/config.json '
+                            + '(one typo → Authentication failed). The file is gitignored, so it is safe to paste the exact key there.');
+                    }
                 }
             } catch (err) {
-                appendMessage('assistant', 'System error: ' + err.message);
+                if (err.message && err.message.includes('aborted')) {
+                    appendMessage('assistant', '⏹ Stopped.');
+                } else {
+                    appendMessage('assistant', 'System error: ' + err.message);
+                }
             }
 
             aiInput.disabled = false;
-            aiSubmit.disabled = false;
-            aiSubmit.innerHTML = 'Send';
+            setAiGenerating(false);
             aiInput.focus();
         }
 
-        aiSubmit.addEventListener('click', sendAiMessage);
+        // Quick-action chips feed pre-filled prompts into the AI
+        document.querySelectorAll('.ai-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const prefix = chip.getAttribute('data-prompt');
+                const code = (typeof editor !== 'undefined' && editor) ? editor.getValue().trim() : '';
+                const prompt = code ? (prefix + '\n\n```epp\n' + code.slice(0, 5000) + '\n```') : prefix;
+                sendAiMessage(prompt);
+            });
+        });
+
+        aiSubmit.addEventListener('click', () => {
+            if (aiGenerating) {
+                sendAiMessage('__stop__'); // trigger stop path
+            } else {
+                sendAiMessage();
+            }
+        });
         aiInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendAiMessage();
+            }
+        });
+        aiInput.addEventListener('input', () => {
+            if (!aiGenerating) {
+                // keep Send enabled; no-op
             }
         });
 

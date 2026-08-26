@@ -30,19 +30,29 @@ The IDE runs `.epp` files with the bundled interpreter binary if present (`dist/
 ## AI Agent Setup (Bring Your Own Key)
 
 The built-in AI agent works with **any OpenAI-compatible chat completions API**.
+The defaults are wired for **Hack Club AI** (`https://ai.hackclub.com/proxy/v1`, model `stealth/ox-alpha`).
 
-Configure via environment variables:
-
+**Hack Club (recommended):**
 ```bash
-export EPP_AI_API_KEY="nvapi-... or sk-... or gsk_..."
-export EPP_AI_BASE_URL="https://integrate.api.nvidia.com/v1"   # optional
-export EPP_AI_MODEL="meta/llama-3.1-405b-instruct"             # optional
+cp config.json.example config.json   # then paste your sk-hc-... key into config.json
+npm start
+```
+Or via env vars:
+```bash
+export EPP_AI_API_KEY="sk-hc-v1-..."
+export EPP_AI_BASE_URL="https://ai.hackclub.com/proxy/v1"
+export EPP_AI_MODEL="stealth/ox-alpha"
 npm start
 ```
 
-...or copy `config.json.example` to `config.json` and fill in your values (this file is gitignored).
+**Other providers** (env vars or config.json):
+```bash
+export EPP_AI_API_KEY="nvapi-... or sk-... or gsk_..."
+export EPP_AI_BASE_URL="https://integrate.api.nvidia.com/v1"   # Nvidia example
+export EPP_AI_MODEL="meta/llama-3.1-405b-instruct"
+```
 
-Supported providers include Nvidia NIM, OpenAI, Groq, Together, OpenRouter and local [Ollama](https://ollama.com) (`http://localhost:11434/v1`).
+Supported providers include Hack Club AI, Nvidia NIM, OpenAI, Groq, Together, OpenRouter and local [Ollama](https://ollama.com) (`http://localhost:11434/v1`). The agent automatically sends your current editor content for context, caps history, and shows a **Stop** button while generating; chips like **Explain / Fix bugs / Tests / Game** let you prompt in one click.
 
 > **Security:** never commit API keys. Older versions of this project shipped a key in source control — it has been removed; revoke it if you had enabled it.
 
